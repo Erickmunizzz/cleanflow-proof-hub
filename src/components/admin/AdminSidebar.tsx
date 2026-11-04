@@ -38,8 +38,9 @@ export function AdminSidebar({ open, onNavigate }: { open: boolean; onNavigate: 
                 return (
                   <Link
                     key={item.id}
-                    to={item.id === "overview" ? "/admin" : "/admin/$section"}
-                    params={item.id === "overview" ? undefined : { section: item.id }}
+                    {...(item.id === "overview"
+                      ? { to: "/admin" as const }
+                      : { to: "/admin/$section" as const, params: { section: item.id } })}
                     onClick={onNavigate}
                     className={cn(
                       "flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-[13.5px] font-medium transition-all",
