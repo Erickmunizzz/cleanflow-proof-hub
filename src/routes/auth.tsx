@@ -35,8 +35,8 @@ function AuthPage() {
         ? await supabase.auth.signInWithPassword({ email, password })
         : await supabase.auth.signUp({ email, password, options: { emailRedirectTo: window.location.origin } });
     setBusy(false);
-    if (res.error) return toast.error(res.error.message);
-    if (!res.data.session) return toast.success("Check your email to confirm your account.");
+    if (res.error) { toast.error(res.error.message); return; }
+    if (!res.data.session) { toast.success("Check your email to confirm your account."); return; }
     navigate({ to: "/admin/$section", params: { section: "jobs" }, replace: true });
   }
 

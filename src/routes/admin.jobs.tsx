@@ -5,6 +5,7 @@ import { CheckSquare, Clock3, LogIn, LogOut, Plus, Square } from "lucide-react";
 import { toast } from "sonner";
 import type { Session } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
+import type { TablesUpdate } from "@/integrations/supabase/types";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 
@@ -94,7 +95,7 @@ function JobsBoard() {
   }, [qc]);
 
   const update = useMutation({
-    mutationFn: async ({ id, patch }: { id: string; patch: Record<string, unknown> }) => {
+    mutationFn: async ({ id, patch }: { id: string; patch: TablesUpdate<"jobs"> }) => {
       const { error } = await supabase.from("jobs").update(patch).eq("id", id);
       if (error) throw error;
     },
