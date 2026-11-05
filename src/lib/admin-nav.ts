@@ -15,6 +15,7 @@ import {
   Clock3,
   History,
   Settings,
+  ListChecks,
   type LucideIcon,
 } from "lucide-react";
 
@@ -34,6 +35,7 @@ export const adminNav: AdminNavGroup[] = [
     group: "Operations",
     items: [
       { id: "overview", label: "Overview", icon: LayoutDashboard },
+      { id: "jobs", label: "Jobs", icon: ListChecks },
       { id: "scheduling", label: "Scheduling", icon: CalendarDays },
       { id: "checkin", label: "Check-in", icon: ClipboardCheck },
     ],

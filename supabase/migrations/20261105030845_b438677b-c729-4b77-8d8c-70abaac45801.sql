@@ -1,0 +1,15 @@
+CREATE TABLE IF NOT EXISTS public.clients (id uuid PRIMARY KEY DEFAULT gen_random_uuid(), name text NOT NULL, email text, phone text, address text, created_at timestamptz NOT NULL DEFAULT now());
+CREATE TABLE public.staff (id uuid PRIMARY KEY DEFAULT gen_random_uuid(), name text NOT NULL, email text, phone text, role text, created_at timestamptz NOT NULL DEFAULT now());
+CREATE TABLE public.materials (id uuid PRIMARY KEY DEFAULT gen_random_uuid(), name text NOT NULL, quantity numeric NOT NULL DEFAULT 0, unit text, created_at timestamptz NOT NULL DEFAULT now());
+CREATE TABLE public.jobs (id uuid PRIMARY KEY DEFAULT gen_random_uuid(), client_id uuid REFERENCES public.clients(id) ON DELETE SET NULL, staff_id uuid REFERENCES public.staff(id) ON DELETE SET NULL, title text NOT NULL, status text NOT NULL DEFAULT 'scheduled', scheduled_date timestamptz NOT NULL DEFAULT now(), check_in_at timestamptz, check_out_at timestamptz, notes text, checklist jsonb NOT NULL DEFAULT '[]'::jsonb, created_at timestamptz NOT NULL DEFAULT now());
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.clients, public.staff, public.materials, public.jobs TO authenticated;
+GRANT ALL ON public.clients, public.staff, public.materials, public.jobs TO service_role;
+ALTER TABLE public.clients ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.staff ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.materials ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.jobs ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Signed-in users manage clients" ON public.clients FOR ALL TO authenticated USING (true) WITH CHECK (true);
+CREATE POLICY "Signed-in users manage staff" ON public.staff FOR ALL TO authenticated USING (true) WITH CHECK (true);
+CREATE POLICY "Signed-in users manage materials" ON public.materials FOR ALL TO authenticated USING (true) WITH CHECK (true);
+CREATE POLICY "Signed-in users manage jobs" ON public.jobs FOR ALL TO authenticated USING (true) WITH CHECK (true);
+ALTER PUBLICATION supabase_realtime ADD TABLE public.jobs;
