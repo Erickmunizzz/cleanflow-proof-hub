@@ -1,38 +1,26 @@
-import { createFileRoute, Link, notFound } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { findAdminNavItem } from "@/lib/admin-nav";
+import { OperationsSection } from "@/components/admin/OperationsSection";
+import { AdminRecordsError } from "@/components/admin/AdminRecordsError";
 
 export const Route = createFileRoute("/admin/$section")({
-  loader: ({ params }) => {
-    const item = findAdminNavItem(params.section);
-    if (!item) throw notFound();
-    return { label: item.label };
-  },
-  head: ({ loaderData }) => ({
+  head: ({ params }) => ({
     meta: [
-      { title: `${loaderData?.label ?? "Admin"} — CleanFlow UK` },
+      { title: `${findAdminNavItem(params.section)?.label ?? "Unavailable"} — CleanFlow UK` },
       { name: "description", content: "CleanFlow UK admin workspace for commercial cleaning operations." },
+      { property: "og:title", content: `${findAdminNavItem(params.section)?.label ?? "Unavailable"} — CleanFlow UK` },
+      { property: "og:description", content: `Cleaning operations: ${findAdminNavItem(params.section)?.label ?? "Unavailable"}.` },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
     ],
   }),
-  component: SectionPlaceholder,
+  component: SectionPage,
+  errorComponent: AdminRecordsError,
 });
 
-function SectionPlaceholder() {
-  const { label } = Route.useLoaderData();
-  return (
-    <div className="space-y-6">
-      <h1 className="text-[26px] font-bold tracking-tight">{label}</h1>
-      <div className="rounded-2xl border border-border bg-card p-10 text-center shadow-[var(--shadow-card)]">
-        <div className="text-[15px] font-semibold">This screen is being rebuilt</div>
-        <p className="mt-1 text-[13px] text-muted-foreground">
-          {label} will be brought over from the prototype in an upcoming step.
-        </p>
-        <Link
-          to="/admin"
-          className="mt-5 inline-flex h-9 items-center rounded-xl bg-primary px-4 text-[13px] font-semibold text-primary-foreground hover:bg-primary/90"
-        >
-          Back to Overview
-        </Link>
-      </div>
-    </div>
-  );
+function SectionPage() {
+  const { section } = Route.useParams();
+  const item = findAdminNavItem(section);
+  if (!item) return <h1 className="text-xl font-semibold">Page not found</h1>;
+  return <OperationsSection section={section} label={item.label} />;
 }
