@@ -11,6 +11,8 @@
 
 ## Architecture
 - Admin area lives under `/admin` (layout `src/routes/admin.tsx` with sidebar/topbar in `src/components/admin/`); sidebar items come from `src/lib/admin-nav.ts` so one list drives menu and section routes.
-- Not-yet-ported admin screens render via `admin.$section.tsx` placeholder; replace with a dedicated route file when porting each screen.
+- Customer, staff and material directories use dedicated routes and a shared records form; remaining admin sections derive truthful views from available Supabase records without implying unsupported registers exist.
+- Shared authenticated server functions own directory reads and writes; session-gated Suspense reads preserve the existing public Overview and /admin URLs.
+- Initial sample records belong in conditional database migrations, never mount-time writes, to prevent duplicate records and privileged browser seeding.
 - Demo data lives in `src/lib/data/` so screens can switch to real data without UI changes.
 - Prototype colours are semantic tokens in `src/styles.css` (success/warning/danger/ink/primary-soft); never use raw Tailwind palette colours.
