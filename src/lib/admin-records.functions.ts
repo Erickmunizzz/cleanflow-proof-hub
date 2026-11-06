@@ -1,13 +1,35 @@
 import { createServerFn } from "@tanstack/react-start";
+import type { SupabaseClient } from "@supabase/supabase-js";
+import type { Database } from "@/integrations/supabase/types";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { customerSchema, staffSchema, materialSchema } from "./admin-records.schema";
+
+type AuthenticatedDb = SupabaseClient<Database>;
+
+async function getOwnerCompanyId(db: AuthenticatedDb, userId: string) {
+  const { data: profile, error } = await db
+    .from("profiles")
+    .select("company_id, role, is_active")
+    .eq("id", userId)
+    .maybeSingle();
+
+  if (error) throw new Error(error.message);
+  if (!profile || profile.role !== "owner" || !profile.is_active) {
+    throw new Error("Active owner access is required.");
+  }
+  return profile.company_id;
+}
 
 export const getAdminRecords = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     const db = context.supabase;
+    const companyId = await getOwnerCompanyId(db, context.userId);
+
     // Page through every table: PostgREST otherwise truncates lists at 1,000 rows.
-    async function all<T>(read: (start: number, end: number) => PromiseLike<{ data: T[] | null; error: { message: string } | null }>) {
+    async function all<T>(
+      read: (start: number, end: number) => PromiseLike<{ data: T[] | null; error: { message: string } | null }>,
+    ) {
       const rows: T[] = [];
       for (let start = 0; ; start += 1000) {
         const result = await read(start, start + 999);
@@ -17,30 +39,38 @@ export const getAdminRecords = createServerFn({ method: "POST" })
         if (page.length < 1000) return rows;
       }
     }
+
     const [clients, staff, materials, jobs] = await Promise.all([
-      all((a, b) => db.from("clients").select("*").order("name").order("id").range(a, b)),
-      all((a, b) => db.from("staff").select("*").order("name").order("id").range(a, b)),
-      all((a, b) => db.from("materials").select("*").order("name").order("id").range(a, b)),
-      all((a, b) => db.from("jobs").select("*, clients(name), staff(name)").order("scheduled_date").order("id").range(a, b)),
+      all((a, b) => db.from("clients").select("*").eq("company_id", companyId).order("name").order("id").range(a, b)),
+      all((a, b) => db.from("staff").select("*").eq("company_id", companyId).order("name").order("id").range(a, b)),
+      all((a, b) => db.from("materials").select("*").eq("company_id", companyId).order("name").order("id").range(a, b)),
+      all((a, b) => db.from("jobs")
+        .select("*, clients!jobs_customer_same_company_fkey(name), staff!jobs_staff_same_company_fkey(name)")
+        .eq("company_id", companyId).order("scheduled_date").order("id").range(a, b)),
     ]);
     return { clients, staff, materials, jobs };
   });
 
 export const addCustomer = createServerFn({ method: "POST" }).middleware([requireSupabaseAuth])
   .inputValidator(customerSchema).handler(async ({ data, context }) => {
-    const result = await context.supabase.from("clients").insert(data).select().single();
+    const companyId = await getOwnerCompanyId(context.supabase, context.userId);
+    const result = await context.supabase.from("clients").insert({ ...data, company_id: companyId }).select().single();
     if (result.error) throw new Error(result.error.message);
     return result.data;
   });
+
 export const addStaff = createServerFn({ method: "POST" }).middleware([requireSupabaseAuth])
   .inputValidator(staffSchema).handler(async ({ data, context }) => {
-    const result = await context.supabase.from("staff").insert(data).select().single();
+    const companyId = await getOwnerCompanyId(context.supabase, context.userId);
+    const result = await context.supabase.from("staff").insert({ ...data, company_id: companyId }).select().single();
     if (result.error) throw new Error(result.error.message);
     return result.data;
   });
+
 export const addMaterial = createServerFn({ method: "POST" }).middleware([requireSupabaseAuth])
   .inputValidator(materialSchema).handler(async ({ data, context }) => {
-    const result = await context.supabase.from("materials").insert(data).select().single();
+    const companyId = await getOwnerCompanyId(context.supabase, context.userId);
+    const result = await context.supabase.from("materials").insert({ ...data, company_id: companyId }).select().single();
     if (result.error) throw new Error(result.error.message);
     return result.data;
   });

@@ -8,6 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 import type { TablesUpdate } from "@/integrations/supabase/types";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
+import { ownerContextOptions } from "@/lib/owner-context";
 
 export const Route = createFileRoute("/admin/jobs")({
   head: () => ({
@@ -71,13 +72,18 @@ function JobsPage() {
 function JobsBoard() {
   const qc = useQueryClient();
   const [open, setOpen] = useState(false);
+  const ownerContextQ = useQuery(ownerContextOptions);
 
+  const companyId = ownerContextQ.data?.companyId;
   const jobsQ = useQuery({
-    queryKey: ["jobs"],
+    queryKey: ["jobs", companyId],
+    enabled: Boolean(companyId),
     queryFn: async () => {
+      if (!companyId) throw new Error("Owner company is unavailable.");
       const { data, error } = await supabase
         .from("jobs")
-        .select("*, clients(name), staff(name)")
+        .select("*, clients!jobs_customer_same_company_fkey(name), staff!jobs_staff_same_company_fkey(name)")
+        .eq("company_id", companyId)
         .order("scheduled_date", { ascending: true });
       if (error) throw error;
       return data as unknown as Job[];
@@ -85,14 +91,15 @@ function JobsBoard() {
   });
 
   useEffect(() => {
+    if (!companyId) return;
     const channel = supabase
-      .channel(`jobs-${Math.random().toString(36).slice(2)}`)
-      .on("postgres_changes", { event: "*", schema: "public", table: "jobs" }, () =>
-        qc.invalidateQueries({ queryKey: ["jobs"] }),
+      .channel(`owner-jobs-${companyId}`)
+      .on("postgres_changes", { event: "*", schema: "public", table: "jobs", filter: `company_id=eq.${companyId}` }, () =>
+        qc.invalidateQueries({ queryKey: ["jobs", companyId] }),
       )
       .subscribe();
-    return () => { supabase.removeChannel(channel); };
-  }, [qc]);
+    return () => { void supabase.removeChannel(channel); };
+  }, [companyId, qc]);
 
   const update = useMutation({
     mutationFn: async ({ id, patch }: { id: string; patch: TablesUpdate<"jobs"> }) => {
@@ -102,6 +109,9 @@ function JobsBoard() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["jobs"] }),
     onError: (e: Error) => toast.error(e.message),
   });
+
+  if (ownerContextQ.isLoading) return <div className="text-[13px] text-muted-foreground">Loading owner workspace…</div>;
+  if (ownerContextQ.isError) return <div role="alert" className={cn(card, "p-6 text-[13px] text-danger")}>{ownerContextQ.error.message}</div>;
 
   const jobs = jobsQ.data ?? [];
 
@@ -191,22 +201,22 @@ function JobsBoard() {
         })}
       </div>
 
-      <AddJobDialog open={open} onOpenChange={setOpen} />
+      <AddJobDialog open={open} onOpenChange={setOpen} companyId={ownerContextQ.data!.companyId} />
     </div>
   );
 }
 
-function AddJobDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (v: boolean) => void }) {
+function AddJobDialog({ open, onOpenChange, companyId }: { open: boolean; onOpenChange: (v: boolean) => void; companyId: string }) {
   const qc = useQueryClient();
   const [form, setForm] = useState({ title: "", client_id: "", staff_id: "", scheduled_date: "", notes: "" });
 
   const people = useQuery({
-    queryKey: ["job-pickers"],
+    queryKey: ["job-pickers", companyId],
     enabled: open,
     queryFn: async () => {
       const [c, s] = await Promise.all([
-        supabase.from("clients").select("id, name").order("name"),
-        supabase.from("staff").select("id, name").order("name"),
+        supabase.from("clients").select("id, name").eq("company_id", companyId).order("name"),
+        supabase.from("staff").select("id, name").eq("company_id", companyId).eq("is_active", true).not("profile_id", "is", null).order("name"),
       ]);
       if (c.error) throw c.error;
       if (s.error) throw s.error;
@@ -217,6 +227,7 @@ function AddJobDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (v:
   const create = useMutation({
     mutationFn: async () => {
       const { error } = await supabase.from("jobs").insert({
+        company_id: companyId,
         title: form.title,
         client_id: form.client_id || null,
         staff_id: form.staff_id || null,

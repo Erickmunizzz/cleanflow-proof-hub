@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { useMutation, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { Plus, Search, Users, Package, Briefcase } from "lucide-react";
@@ -10,6 +11,8 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { AdminDataBoundary } from "./AdminSession";
 import { adminRecordsOptions } from "@/lib/admin-records.query";
 import { addCustomer, addStaff, addMaterial } from "@/lib/admin-records.functions";
+import { ownerContextOptions } from "@/lib/owner-context";
+import { supabase } from "@/integrations/supabase/client";
 
 export type RecordKind = "customers" | "staff" | "materials";
 const config = {
@@ -28,6 +31,18 @@ function RecordsContent({ kind, search, onSearch }: { kind: RecordKind; search: 
   const material = useServerFn(addMaterial);
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState<Record<string, string>>({});
+  const ownerContext = useQuery(ownerContextOptions);
+  const cleanerProfiles = useQuery({
+    queryKey: ["cleaner-profiles", ownerContext.data?.companyId],
+    enabled: open && kind === "staff" && Boolean(ownerContext.data?.companyId),
+    queryFn: async () => {
+      if (!ownerContext.data?.companyId) return [];
+      const { data, error } = await supabase.from("profiles").select("id, full_name")
+        .eq("company_id", ownerContext.data.companyId).eq("role", "cleaner").eq("is_active", true).order("full_name");
+      if (error) throw error;
+      return data;
+    },
+  });
   const c = config[kind];
   const Icon = c.icon;
   const records = kind === "customers" ? data.clients : kind === "staff" ? data.staff : data.materials;
@@ -38,11 +53,11 @@ function RecordsContent({ kind, search, onSearch }: { kind: RecordKind; search: 
       const email = form.email ?? "";
       const phone = form.phone ?? "";
       if (kind === "customers") return customer({ data: { name, email, phone, address: form.address ?? "" } });
-      if (kind === "staff") return staff({ data: { name, email, phone, role: form.role ?? "" } });
+      if (kind === "staff") return staff({ data: { name, email, phone, role: form.role ?? "", profile_id: form.profile_id ?? "" } });
       return material({ data: { name, quantity: Number(form.quantity ?? 0), unit: form.unit ?? "" } });
     },
     onSuccess: async () => {
-      await Promise.all([qc.invalidateQueries({ queryKey: ["admin-records"] }), qc.invalidateQueries({ queryKey: ["job-pickers"] })]);
+      await Promise.all([qc.invalidateQueries({ queryKey: ["admin-records"] }), qc.invalidateQueries({ queryKey: ["job-pickers"] }), qc.invalidateQueries({ queryKey: ["message-staff"] })]);
       setOpen(false); setForm({}); toast.success(`${c.singular} added`);
     },
     onError: (error: Error) => toast.error(error.message),
@@ -59,6 +74,14 @@ function RecordsContent({ kind, search, onSearch }: { kind: RecordKind; search: 
     </div>
     <Dialog open={open} onOpenChange={v => { if (!save.isPending) setOpen(v); }}><DialogContent className="max-h-[85dvh] w-[calc(100%-2rem)] overflow-y-auto rounded-xl bg-card"><DialogHeader><DialogTitle>Add {c.singular}</DialogTitle><DialogDescription className="sr-only">{c.singular} details</DialogDescription></DialogHeader>
       <form className="space-y-4" onSubmit={e => { e.preventDefault(); save.mutate(); }}>{c.fields.map(field => <div key={field} className="space-y-2"><Label htmlFor={`record-${field}`} className="capitalize">{field}{field === "name" && " *"}</Label><Input id={`record-${field}`} type={field === "email" ? "email" : field === "quantity" ? "number" : field === "phone" ? "tel" : "text"} min={field === "quantity" ? 0 : undefined} step={field === "quantity" ? "any" : undefined} required={field === "name" || field === "quantity"} value={form[field] ?? (field === "quantity" ? "0" : "")} onChange={e => setForm(prev => ({ ...prev, [field]: e.target.value }))} className="rounded-xl" /></div>)}
+        {kind === "staff" && <div className="space-y-2">
+          <Label htmlFor="record-profile" className="capitalize">Cleaner login</Label>
+          <select id="record-profile" value={form.profile_id ?? ""} onChange={e => setForm(prev => ({ ...prev, profile_id: e.target.value }))} className="h-10 w-full rounded-xl border border-border bg-card px-3 text-sm outline-none focus:border-primary">
+            <option value="">Not linked</option>
+            {cleanerProfiles.data?.map(profile => <option key={profile.id} value={profile.id}>{profile.full_name}</option>)}
+          </select>
+          {cleanerProfiles.isError && <p role="alert" className="text-sm text-danger">Couldn't load cleaner accounts: {(cleanerProfiles.error as Error).message}</p>}
+        </div>}
         {save.isError && <p role="alert" className="text-sm text-danger">{save.error.message}</p>}
         <div className="flex justify-end gap-2"><Button type="button" variant="outline" disabled={save.isPending} onClick={() => setOpen(false)} className="rounded-xl">Cancel</Button><Button disabled={save.isPending} className="rounded-xl">{save.isPending ? "Saving…" : `Save ${c.singular.toLowerCase()}`}</Button></div>
       </form></DialogContent></Dialog>
