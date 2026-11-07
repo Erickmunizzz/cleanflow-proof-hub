@@ -49,12 +49,12 @@ function RecordsContent({ kind, search, onSearch }: { kind: RecordKind; search: 
   const rows = records.filter(row => Object.values(row).some(value => String(value ?? "").toLowerCase().includes(search.toLowerCase())));
   const save = useMutation({
     mutationFn: async () => {
-      const name = form.name ?? "";
-      const email = form.email ?? "";
-      const phone = form.phone ?? "";
-      if (kind === "customers") return customer({ data: { name, email, phone, address: form.address ?? "" } });
-      if (kind === "staff") return staff({ data: { name, email, phone, role: form.role ?? "", profile_id: form.profile_id ?? "" } });
-      return material({ data: { name, quantity: Number(form.quantity ?? 0), unit: form.unit ?? "" } });
+      const name = form['name'] ?? "";
+      const email = form['email'] ?? "";
+      const phone = form['phone'] ?? "";
+      if (kind === "customers") return customer({ data: { name, email, phone, address: form['address'] ?? "" } });
+      if (kind === "staff") return staff({ data: { name, email, phone, role: form['role'] ?? "", profile_id: form['profile_id'] ?? "" } });
+      return material({ data: { name, quantity: Number(form['quantity'] ?? 0), unit: form['unit'] ?? "" } });
     },
     onSuccess: async () => {
       await Promise.all([qc.invalidateQueries({ queryKey: ["admin-records"] }), qc.invalidateQueries({ queryKey: ["job-pickers"] }), qc.invalidateQueries({ queryKey: ["message-staff"] })]);
@@ -76,7 +76,7 @@ function RecordsContent({ kind, search, onSearch }: { kind: RecordKind; search: 
       <form className="space-y-4" onSubmit={e => { e.preventDefault(); save.mutate(); }}>{c.fields.map(field => <div key={field} className="space-y-2"><Label htmlFor={`record-${field}`} className="capitalize">{field}{field === "name" && " *"}</Label><Input id={`record-${field}`} type={field === "email" ? "email" : field === "quantity" ? "number" : field === "phone" ? "tel" : "text"} min={field === "quantity" ? 0 : undefined} step={field === "quantity" ? "any" : undefined} required={field === "name" || field === "quantity"} value={form[field] ?? (field === "quantity" ? "0" : "")} onChange={e => setForm(prev => ({ ...prev, [field]: e.target.value }))} className="rounded-xl" /></div>)}
         {kind === "staff" && <div className="space-y-2">
           <Label htmlFor="record-profile" className="capitalize">Cleaner login</Label>
-          <select id="record-profile" value={form.profile_id ?? ""} onChange={e => setForm(prev => ({ ...prev, profile_id: e.target.value }))} className="h-10 w-full rounded-xl border border-border bg-card px-3 text-sm outline-none focus:border-primary">
+          <select id="record-profile" value={form['profile_id'] ?? ""} onChange={e => setForm(prev => ({ ...prev, profile_id: e.target.value }))} className="h-10 w-full rounded-xl border border-border bg-card px-3 text-sm outline-none focus:border-primary">
             <option value="">Not linked</option>
             {cleanerProfiles.data?.map(profile => <option key={profile.id} value={profile.id}>{profile.full_name}</option>)}
           </select>

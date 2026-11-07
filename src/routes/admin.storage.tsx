@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { RecordsPage } from "@/components/admin/RecordsPage";
 import { AdminRecordsError } from "@/components/admin/AdminRecordsError";
 export const Route = createFileRoute("/admin/storage")({
-  validateSearch: (search: Record<string, unknown>) => ({ q: typeof search.q === "string" ? search.q : "" }),
+  validateSearch: (search: Record<string, unknown>) => ({ q: typeof search['q'] === "string" ? search['q'] : "" }),
   head: () => ({ meta: [
     { title: "Materials & Replenishment — CleanFlow UK" },
     { name: "description", content: "Materials & Replenishment records in your CleanFlow UK workspace." },
