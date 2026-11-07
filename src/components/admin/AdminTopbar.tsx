@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "@tanstack/react-router";
-import { ChevronDown, CircleHelp, Menu, Search, Settings, Users } from "lucide-react";
+import { ChevronDown, CircleHelp, LogOut, Menu, Search, Settings, Users } from "lucide-react";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 
 const configItems = [
@@ -13,10 +14,67 @@ const configItems = [
   "Resource categories",
 ];
 
+type Account = { name: string; email: string };
+
 export function AdminTopbar({ onToggleMenu }: { onToggleMenu: () => void }) {
   const [query, setQuery] = useState("");
   const [configOpen, setConfigOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
+  const [account, setAccount] = useState<Account | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    const loadAccount = async () => {
+      const { data, error } = await supabase.auth.getUser();
+      if (!active) return;
+      if (error || !data.user) {
+        setAccount(null);
+        return;
+      }
+
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("full_name, role, is_active")
+        .eq("id", data.user.id)
+        .maybeSingle();
+
+      if (!active) return;
+      if (profile?.role === "owner" && profile.is_active) {
+        setAccount({
+          name: profile.full_name || data.user.email || "Owner",
+          email: data.user.email || "",
+        });
+      } else {
+        setAccount(null);
+      }
+    };
+
+    void loadAccount();
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(() => {
+      void loadAccount();
+    });
+    return () => {
+      active = false;
+      subscription.unsubscribe();
+    };
+  }, []);
+
+  const signOut = async () => {
+    const { error } = await supabase.auth.signOut();
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    setProfileOpen(false);
+    toast.success("Signed out");
+  };
+
+  const initials = account?.name
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase())
+    .join("") || "O";
 
   return (
     <header className="sticky top-0 z-30 flex h-16 items-center gap-3 border-b border-border bg-card/80 px-4 backdrop-blur-xl lg:px-6">
@@ -33,9 +91,6 @@ export function AdminTopbar({ onToggleMenu }: { onToggleMenu: () => void }) {
             className="h-10 w-full rounded-xl border border-transparent bg-surface-2 pl-10 pr-4 text-[13.5px] outline-none transition focus:border-primary focus:bg-card"
           />
         </div>
-        <span className="hidden h-8 items-center gap-1.5 rounded-full border border-warning-border bg-warning-soft px-3 text-[11px] font-semibold text-warning-strong sm:inline-flex">
-          <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-warning" /> Trial 14 days
-        </span>
       </div>
 
       <div className="flex items-center gap-1">
@@ -88,23 +143,25 @@ export function AdminTopbar({ onToggleMenu }: { onToggleMenu: () => void }) {
               profileOpen ? "bg-ink text-ink-foreground" : "hover:bg-secondary",
             )}
           >
-            <div className="grid h-8 w-8 place-items-center rounded-full bg-primary text-[12px] font-bold text-primary-foreground">E</div>
-            <span className="hidden text-[13px] font-medium sm:block">elorwen</span>
+            <div className="grid h-8 w-8 place-items-center rounded-full bg-primary text-[12px] font-bold text-primary-foreground">{initials}</div>
+            <span className="hidden max-w-32 truncate text-[13px] font-medium sm:block">{account?.name || "Owner"}</span>
             <ChevronDown className={cn("hidden h-4 w-4 transition sm:block", profileOpen && "rotate-180")} />
           </button>
           {profileOpen && (
             <div className="absolute right-0 z-50 mt-2 w-[220px] rounded-2xl border border-border bg-popover p-2 text-popover-foreground shadow-xl">
               <div className="px-3 py-2">
-                <div className="text-[13px] font-semibold">elorwen</div>
-                <div className="text-[11px] text-muted-foreground">admin@cleanflow.uk</div>
+                <div className="truncate text-[13px] font-semibold">{account?.name || "Owner"}</div>
+                <div className="truncate text-[11px] text-muted-foreground">{account?.email || "Signed out"}</div>
               </div>
               <div className="my-1 h-px bg-border" />
-              <button
-                onClick={() => { setProfileOpen(false); toast("Profile opened"); }}
+              <Link
+                to="/admin/$section"
+                params={{ section: "settings" }}
+                onClick={() => setProfileOpen(false)}
                 className="flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-left text-[13px] hover:bg-accent"
               >
                 <Users className="h-4 w-4" /> Profile
-              </button>
+              </Link>
               <Link
                 to="/admin/$section"
                 params={{ section: "settings" }}
@@ -113,6 +170,12 @@ export function AdminTopbar({ onToggleMenu }: { onToggleMenu: () => void }) {
               >
                 <Settings className="h-4 w-4" /> Settings
               </Link>
+              <button
+                onClick={() => void signOut()}
+                className="flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-left text-[13px] text-destructive hover:bg-accent"
+              >
+                <LogOut className="h-4 w-4" /> Sign out
+              </button>
             </div>
           )}
         </div>
