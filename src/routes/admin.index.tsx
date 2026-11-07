@@ -1,25 +1,41 @@
+import { useEffect } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
-  ArrowRight, Briefcase, Camera, CircleCheck, CircleX, ClipboardCheck, Clock3, Download,
-  MapPin, ShieldCheck, TrendingUp, TriangleAlert, UserCog, Users,
+  ArrowRight, Briefcase, CircleCheck, ClipboardCheck, Clock3, Download,
+  MapPin, Package, ShieldCheck, TrendingUp, TriangleAlert, Users,
 } from "lucide-react";
-import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
+import { ownerContextOptions } from "@/lib/owner-context";
 import { cn } from "@/lib/utils";
-import {
-  attentionJobs, completedJobsWeek, recentCheckins, snapshot, staffPins, statusCards, type Tone,
-} from "@/lib/data/overview";
 
 export const Route = createFileRoute("/admin/")({
   head: () => ({
     meta: [
       { title: "Operations Overview — CleanFlow UK" },
-      { name: "description", content: "Live overview of jobs, check-ins and site issues for your cleaning team." },
+      { name: "description", content: "Live overview of jobs, check-ins and site operations for your cleaning team." },
       { property: "og:title", content: "Operations Overview — CleanFlow UK" },
-      { property: "og:description", content: "Live overview of jobs, check-ins and site issues for your cleaning team." },
+      { property: "og:description", content: "Live overview of jobs, check-ins and site operations for your cleaning team." },
     ],
   }),
   component: Overview,
 });
+
+type Tone = "success" | "warning" | "danger";
+type Job = {
+  id: string;
+  title: string;
+  status: string;
+  scheduled_date: string;
+  check_in_at: string | null;
+  check_out_at: string | null;
+  check_in_latitude: number | null;
+  check_in_longitude: number | null;
+  clients: { name: string; address: string | null } | null;
+  staff: { name: string } | null;
+};
+type Staff = { id: string; name: string; profile_id: string | null; is_active: boolean };
+type Material = { id: string; quantity: number | string };
 
 const toneIcon: Record<Tone, string> = {
   success: "bg-success-soft text-success-strong",
@@ -27,65 +43,245 @@ const toneIcon: Record<Tone, string> = {
   danger: "bg-danger-soft text-danger",
 };
 const toneDot: Record<Tone, string> = { success: "bg-success", warning: "bg-warning", danger: "bg-danger" };
-const ToneIcon = { success: CircleCheck, warning: TriangleAlert, danger: CircleX };
-
+const ToneIcon = { success: CircleCheck, warning: TriangleAlert, danger: TriangleAlert };
 const card = "rounded-2xl border border-border bg-card shadow-[var(--shadow-card)]";
+const fmt = (value: string | null) => value
+  ? new Date(value).toLocaleString("en-GB", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })
+  : "—";
+const statusOf = (job: Job) => job.status.toLowerCase().replaceAll("-", "_");
+const startOfDay = (date: Date) => {
+  const start = new Date(date);
+  start.setHours(0, 0, 0, 0);
+  return start;
+};
 
-const today = new Date();
-const todayLabel = today.toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "short", year: "numeric" });
+async function loadOverview(companyId: string) {
+  const jobs: Job[] = [];
+  for (let start = 0; ; start += 1000) {
+    const { data, error } = await supabase
+      .from("jobs")
+      .select("id,title,status,scheduled_date,check_in_at,check_out_at,check_in_latitude,check_in_longitude,clients!jobs_customer_same_company_fkey(name,address),staff!jobs_staff_same_company_fkey(name)")
+      .eq("company_id", companyId)
+      .order("scheduled_date", { ascending: true })
+      .range(start, start + 999);
+    if (error) throw new Error(error.message);
+    const page = (data ?? []) as unknown as Job[];
+    jobs.push(...page);
+    if (page.length < 1000) break;
+  }
+
+  const [staffResult, clientsResult, materialsResult] = await Promise.all([
+    supabase.from("staff").select("id,name,profile_id,is_active").eq("company_id", companyId).order("name"),
+    supabase.from("clients").select("id", { count: "exact", head: true }).eq("company_id", companyId),
+    supabase.from("materials").select("id,quantity").eq("company_id", companyId),
+  ]);
+  for (const result of [staffResult, clientsResult, materialsResult]) {
+    if (result.error) throw new Error(result.error.message);
+  }
+
+  return {
+    jobs,
+    staff: (staffResult.data ?? []) as Staff[],
+    customerCount: clientsResult.count ?? 0,
+    materials: (materialsResult.data ?? []) as Material[],
+  };
+}
+
+function downloadJobs(jobs: Job[]) {
+  const fields = ["title", "status", "scheduled_date", "customer", "staff", "check_in_at", "check_out_at"];
+  const csvCell = (value: unknown) => `"${String(value ?? "").replaceAll('"', '""')}"`;
+  const rows = jobs.map((job) => [
+    job.title, job.status, job.scheduled_date, job.clients?.name ?? "",
+    job.staff?.name ?? "", job.check_in_at ?? "", job.check_out_at ?? "",
+  ]);
+  const csv = [fields, ...rows].map((row) => row.map(csvCell).join(",")).join("\r\n");
+  const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = "cleanflow-jobs.csv";
+  anchor.click();
+  URL.revokeObjectURL(url);
+}
 
 function Overview() {
+  const queryClient = useQueryClient();
+  const ownerQuery = useQuery(ownerContextOptions);
+  const companyId = ownerQuery.data?.companyId;
+  const overviewQuery = useQuery({
+    queryKey: ["owner-overview", companyId],
+    enabled: Boolean(companyId),
+    queryFn: () => {
+      if (!companyId) throw new Error("Owner company is unavailable.");
+      return loadOverview(companyId);
+    },
+    refetchOnWindowFocus: true,
+  });
+
+  useEffect(() => {
+    if (!companyId) return;
+    const channel = supabase
+      .channel(`owner-overview-${companyId}`)
+      .on("postgres_changes", {
+        event: "*", schema: "public", table: "jobs", filter: `company_id=eq.${companyId}`,
+      }, () => {
+        void queryClient.invalidateQueries({ queryKey: ["owner-overview", companyId] });
+      })
+      .subscribe();
+    return () => { void supabase.removeChannel(channel); };
+  }, [companyId, queryClient]);
+
+  if (ownerQuery.isLoading || overviewQuery.isLoading) {
+    return <div className="text-[13px] text-muted-foreground">Loading operations overview…</div>;
+  }
+  if (ownerQuery.isError || overviewQuery.isError) {
+    const error = ownerQuery.error ?? overviewQuery.error;
+    return <div role="alert" className={cn(card, "p-6 text-[13px] text-danger")}>Couldn't load operations overview: {error.message}</div>;
+  }
+
+  const data = overviewQuery.data;
+  if (!data) return null;
+
+  const now = new Date();
+  const todayStart = startOfDay(now);
+  const tomorrow = new Date(todayStart);
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  const weekStart = new Date(todayStart);
+  weekStart.setDate(weekStart.getDate() - 6);
+  const priorWeekStart = new Date(todayStart);
+  priorWeekStart.setDate(priorWeekStart.getDate() - 13);
+  const inRange = (value: string, start: Date, end: Date) => {
+    const time = new Date(value).getTime();
+    return time >= start.getTime() && time < end.getTime();
+  };
+
+  const todayJobs = data.jobs.filter((job) => inRange(job.scheduled_date, todayStart, tomorrow));
+  const upcomingEnd = new Date(tomorrow);
+  upcomingEnd.setDate(upcomingEnd.getDate() + 6);
+  const upcomingJobs = data.jobs.filter((job) => inRange(job.scheduled_date, tomorrow, upcomingEnd));
+  const completedThisWeek = data.jobs.filter((job) => statusOf(job) === "completed" && inRange(job.scheduled_date, weekStart, tomorrow));
+  const completedPriorWeek = data.jobs.filter((job) => statusOf(job) === "completed" && inRange(job.scheduled_date, priorWeekStart, weekStart));
+  const activeStaff = data.staff.filter((person) => person.is_active);
+  const linkedStaff = activeStaff.filter((person) => Boolean(person.profile_id));
+  const outOfStock = data.materials.filter((material) => Number(material.quantity) <= 0).length;
+  const activeJobs = data.jobs.filter((job) => statusOf(job) === "in_progress" && job.check_in_at && !job.check_out_at);
+  const todayCheckins = data.jobs
+    .filter((job) => job.check_in_at && inRange(job.check_in_at, todayStart, tomorrow))
+    .sort((a, b) => new Date(b.check_in_at!).getTime() - new Date(a.check_in_at!).getTime());
+  const attentionJobs = data.jobs.flatMap((job) => {
+    const status = statusOf(job);
+    const scheduled = new Date(job.scheduled_date);
+    if (status === "scheduled" && scheduled < now) {
+      return [{ job, issue: "Scheduled time has passed", priority: "High" as const }];
+    }
+    if (status === "in_progress" && job.check_in_at && !job.check_out_at
+      && now.getTime() - new Date(job.check_in_at).getTime() > 2 * 60 * 60 * 1000) {
+      return [{ job, issue: "Check-out is overdue", priority: "Medium" as const }];
+    }
+    return [];
+  }).sort((a, b) => (a.priority === "High" ? -1 : 1) - (b.priority === "High" ? -1 : 1));
+
+  const chartDays = Array.from({ length: 7 }, (_, index) => {
+    const date = new Date(weekStart);
+    date.setDate(weekStart.getDate() + index);
+    const end = new Date(date);
+    end.setDate(end.getDate() + 1);
+    return {
+      date,
+      count: data.jobs.filter((job) => statusOf(job) === "completed" && inRange(job.scheduled_date, date, end)).length,
+    };
+  });
+  const chartMax = Math.max(1, ...chartDays.map((day) => day.count));
+  const chartPoints = chartDays.map((day, index) => ({
+    x: index * (340 / 6),
+    y: 124 - (day.count / chartMax) * 96,
+    count: day.count,
+  }));
+  const linePath = chartPoints.map((point, index) => `${index === 0 ? "M" : "L"}${point.x},${point.y}`).join(" ");
+  const areaPath = `${linePath} L340,140 L0,140 Z`;
+  const weekDifference = completedThisWeek.length - completedPriorWeek.length;
+  const summaryCards = [
+    {
+      title: "Jobs Today", tone: todayJobs.length ? "success" as Tone : "warning" as Tone,
+      rows: [
+        ["Scheduled:", String(todayJobs.filter((job) => statusOf(job) === "scheduled").length)],
+        ["In progress:", String(todayJobs.filter((job) => statusOf(job) === "in_progress").length)],
+        ["Completed:", String(todayJobs.filter((job) => statusOf(job) === "completed").length)],
+      ] as [string, string][],
+    },
+    {
+      title: "Customers & Staff", tone: "success" as Tone,
+      rows: [
+        ["Customers:", String(data.customerCount)],
+        ["Active staff:", String(activeStaff.length)],
+        ["Linked cleaner accounts:", String(linkedStaff.length)],
+      ] as [string, string][],
+    },
+    {
+      title: "Upcoming Work", tone: upcomingJobs.length ? "success" as Tone : "warning" as Tone,
+      rows: [
+        ["Next 7 days:", String(upcomingJobs.length)],
+        ["Unassigned:", String(upcomingJobs.filter((job) => !job.staff).length)],
+        ["Awaiting check-in:", String(upcomingJobs.filter((job) => statusOf(job) === "scheduled").length)],
+      ] as [string, string][],
+    },
+    {
+      title: "Materials", tone: outOfStock ? "warning" as Tone : "success" as Tone,
+      rows: [
+        ["Items tracked:", String(data.materials.length)],
+        ["Out of stock:", String(outOfStock)],
+      ] as [string, string][],
+    },
+  ];
+  const gpsJobs = activeJobs.filter((job) => job.check_in_latitude !== null && job.check_in_longitude !== null).slice(0, 12);
+  const latitudes = gpsJobs.map((job) => Number(job.check_in_latitude));
+  const longitudes = gpsJobs.map((job) => Number(job.check_in_longitude));
+  const minLat = Math.min(...latitudes), maxLat = Math.max(...latitudes);
+  const minLng = Math.min(...longitudes), maxLng = Math.max(...longitudes);
+  const gpsPosition = (job: Job) => {
+    const latSpan = maxLat - minLat || 1;
+    const lngSpan = maxLng - minLng || 1;
+    const left = 8 + ((Number(job.check_in_longitude) - minLng) / lngSpan) * 84;
+    const top = 12 + (1 - (Number(job.check_in_latitude) - minLat) / latSpan) * 76;
+    return { left: `${left}%`, top: `${top}%` };
+  };
+  const proofToday = todayJobs.filter((job) => job.check_in_at && job.check_out_at).length;
+  const awaitingCheckout = activeJobs.length;
+
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <h1 className="text-[28px] font-bold leading-none tracking-tight">Operations Overview</h1>
-          <p className="mt-2 text-[13.5px] text-muted-foreground">Live status of your cleaning operations • {todayLabel}</p>
+          <p className="mt-2 text-[13.5px] text-muted-foreground">
+            Live status of your cleaning operations • {now.toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "short", year: "numeric" })}
+          </p>
         </div>
         <div className="flex gap-2">
-          <button
-            onClick={() => toast("Exported daily report")}
-            className="flex h-9 items-center gap-2 rounded-xl border border-border bg-card px-4 text-[13px] font-medium hover:bg-accent"
-          >
-            <Download className="h-4 w-4" /> Export
+          <button onClick={() => downloadJobs(data.jobs)} className="flex h-9 items-center gap-2 rounded-xl border border-border bg-card px-4 text-[13px] font-medium hover:bg-accent">
+            <Download className="h-4 w-4" /> Export jobs
           </button>
-          <Link
-            to="/admin/$section"
-            params={{ section: "checkin" }}
-            className="flex h-9 items-center gap-2 rounded-xl bg-primary px-4 text-[13px] font-semibold text-primary-foreground shadow-sm hover:bg-primary/90"
-          >
+          <Link to="/admin/$section" params={{ section: "checkin" }} className="flex h-9 items-center gap-2 rounded-xl bg-primary px-4 text-[13px] font-semibold text-primary-foreground shadow-sm hover:bg-primary/90">
             <ClipboardCheck className="h-4 w-4" /> View Daily Tasks
           </Link>
         </div>
       </div>
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
-        {statusCards.map((c) => {
-          const Icon = ToneIcon[c.tone];
+        {summaryCards.map((item) => {
+          const Icon = ToneIcon[item.tone];
           return (
-            <div key={c.title} className={cn(card, "p-5 transition hover:shadow-[var(--shadow-card-md)]")}>
+            <div key={item.title} className={cn(card, "p-5 transition hover:shadow-[var(--shadow-card-md)]")}>
               <div className="mb-4 flex items-start justify-between">
                 <div className="flex items-center gap-3">
-                  <div className={cn("grid h-9 w-9 place-items-center rounded-xl", toneIcon[c.tone])}>
-                    <Icon className="h-5 w-5" />
-                  </div>
-                  <div className="text-[14px] font-semibold">{c.title}</div>
+                  <div className={cn("grid h-9 w-9 place-items-center rounded-xl", toneIcon[item.tone])}><Icon className="h-5 w-5" /></div>
+                  <div className="text-[14px] font-semibold">{item.title}</div>
                 </div>
-                <span className={cn("h-2.5 w-2.5 rounded-full", toneDot[c.tone])} />
+                <span className={cn("h-2.5 w-2.5 rounded-full", toneDot[item.tone])} />
               </div>
               <div className="space-y-2">
-                {c.rows.map(([label, value]) => (
+                {item.rows.map(([label, value]) => (
                   <div key={label} className="flex justify-between text-[12.5px]">
-                    <span className="text-muted-foreground">{label}</span>
-                    <span
-                      className={cn(
-                        "font-semibold",
-                        c.tone === "danger" && value !== "0" && "text-danger",
-                        c.tone === "warning" && value !== "0" && "text-warning-strong",
-                      )}
-                    >
-                      {value}
-                    </span>
+                    <span className="text-muted-foreground">{label}</span><span className="font-semibold">{value}</span>
                   </div>
                 ))}
               </div>
@@ -96,31 +292,26 @@ function Overview() {
 
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
         <div className={cn(card, "p-6 xl:col-span-2")}>
-          <div className="mb-6 flex items-center justify-between">
-            <h3 className="text-[15px] font-semibold">Company Snapshot</h3>
-            <span className="rounded-full bg-secondary px-2 py-1 text-[11px] font-medium text-muted-foreground">Demo data</span>
-          </div>
+          <div className="mb-6 flex items-center justify-between"><h3 className="text-[15px] font-semibold">Company Snapshot</h3></div>
           <div className="grid grid-cols-2 gap-6 sm:grid-cols-4">
             {[
-              { label: "Customers", value: snapshot.customers, sub: "Active contracts", icon: Users },
-              { label: "Workplaces", value: snapshot.workplaces, sub: "Sites managed", icon: MapPin },
-              { label: "Employees", value: snapshot.employees, sub: "Field team", icon: Briefcase },
-              { label: "Supervisors", value: snapshot.supervisors, sub: "Quality control", icon: UserCog },
-            ].map((s) => (
-              <div key={s.label} className="space-y-2">
-                <div className="grid h-10 w-10 place-items-center rounded-xl border border-border bg-accent">
-                  <s.icon className="h-5 w-5 text-muted-foreground" />
-                </div>
-                <div className="text-[28px] font-bold leading-none tracking-tight">{s.value}</div>
-                <div className="text-[13px] font-medium">{s.label}</div>
-                <div className="text-[11px] text-muted-foreground">{s.sub}</div>
+              { label: "Customers", value: data.customerCount, sub: "Company records", icon: Users },
+              { label: "Active staff", value: activeStaff.length, sub: "Enabled staff records", icon: Briefcase },
+              { label: "Jobs today", value: todayJobs.length, sub: "Scheduled for today", icon: MapPin },
+              { label: "Materials", value: data.materials.length, sub: "Tracked items", icon: Package },
+            ].map((item) => (
+              <div key={item.label} className="space-y-2">
+                <div className="grid h-10 w-10 place-items-center rounded-xl border border-border bg-accent"><item.icon className="h-5 w-5 text-muted-foreground" /></div>
+                <div className="text-[28px] font-bold leading-none tracking-tight">{item.value}</div>
+                <div className="text-[13px] font-medium">{item.label}</div>
+                <div className="text-[11px] text-muted-foreground">{item.sub}</div>
               </div>
             ))}
           </div>
           <div className="mt-6 grid grid-cols-1 gap-4 border-t border-border pt-6 text-[12.5px] sm:grid-cols-3">
-            <div className="flex items-center gap-2"><ShieldCheck className="h-4 w-4 text-success-strong" /> GDPR compliant logs</div>
-            <div className="flex items-center gap-2"><Clock3 className="h-4 w-4 text-primary" /> 99.9% check-in uptime</div>
-            <div className="flex items-center gap-2"><Camera className="h-4 w-4 text-muted-foreground" /> Photo proof on every job</div>
+            <div className="flex items-center gap-2"><ShieldCheck className="h-4 w-4 text-success-strong" /> Company-scoped records</div>
+            <div className="flex items-center gap-2"><Clock3 className="h-4 w-4 text-primary" /> Live job updates</div>
+            <div className="flex items-center gap-2"><CircleCheck className="h-4 w-4 text-success-strong" /> {proofToday} jobs with check-in and check-out today</div>
           </div>
         </div>
 
@@ -128,23 +319,17 @@ function Overview() {
           <div className="absolute -right-16 -top-16 h-64 w-64 rounded-full bg-primary/20 blur-3xl" />
           <div className="relative">
             <div className="text-[12px] font-semibold uppercase tracking-widest opacity-60">Proof of Service</div>
-            <h3 className="mt-3 text-[18px] font-bold leading-tight">Show clients every job was done.</h3>
-            <p className="mt-2 text-[13px] leading-relaxed opacity-70">
-              Check-in and check-out times, GPS location, checklists and before/after photos — collected by cleaners on their phone.
-            </p>
+            <h3 className="mt-3 text-[18px] font-bold leading-tight">Track each assigned job.</h3>
+            <p className="mt-2 text-[13px] leading-relaxed opacity-70">Check-in and check-out timestamps, GPS coordinates and job status are recorded from the cleaner app.</p>
             <div className="mt-5 space-y-3">
               <div className="flex items-center justify-between rounded-xl bg-ink-foreground/10 px-3 py-2.5 text-[12px]">
-                <span>Jobs with full proof today</span><span className="font-semibold">7 / 9</span>
+                <span>Jobs completed today</span><span className="font-semibold">{todayJobs.filter((job) => statusOf(job) === "completed").length} / {todayJobs.length}</span>
               </div>
               <div className="flex items-center justify-between rounded-xl bg-ink-foreground/10 px-3 py-2.5 text-[12px]">
-                <span>Reports awaiting review</span><span className="font-bold text-success">3</span>
+                <span>Awaiting check-out</span><span className="font-bold text-success">{awaitingCheckout}</span>
               </div>
             </div>
-            <Link
-              to="/admin/$section"
-              params={{ section: "reports" }}
-              className="mt-5 grid h-10 w-full place-items-center rounded-xl bg-card text-[13px] font-semibold text-foreground transition hover:bg-secondary"
-            >
+            <Link to="/admin/$section" params={{ section: "reports" }} className="mt-5 grid h-10 w-full place-items-center rounded-xl bg-card text-[13px] font-semibold text-foreground transition hover:bg-secondary">
               Open Reports →
             </Link>
           </div>
@@ -154,86 +339,50 @@ function Overview() {
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <div className={cn(card, "p-5")}>
           <div className="mb-4 flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <h3 className="text-[14px] font-semibold">Live staff locations - London</h3>
-              <span className="inline-flex items-center gap-1.5 rounded-full border border-success-border bg-success-soft px-2.5 py-1 text-[11px] font-bold text-success-strong">
-                <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-success" /> 4 moving
-              </span>
-            </div>
-            <button
-              onClick={() => toast("Full map view coming soon")}
-              className="flex items-center gap-1 text-[12px] font-semibold text-primary transition hover:text-primary/80"
-            >
-              <MapPin className="h-3.5 w-3.5" /> View map
-            </button>
+            <div><h3 className="text-[14px] font-semibold">Active staff check-ins</h3><p className="mt-1 text-[11px] text-muted-foreground">Relative plot of current GPS points</p></div>
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-success-border bg-success-soft px-2.5 py-1 text-[11px] font-bold text-success-strong">
+              <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-success" /> {activeJobs.length} active
+            </span>
           </div>
           <div className="relative h-[300px] overflow-hidden rounded-xl border border-ink bg-map">
-            <div
-              className="absolute inset-0 opacity-[0.15]"
-              style={{
-                backgroundImage: "linear-gradient(var(--ink-foreground) 1px, transparent 1px), linear-gradient(90deg, var(--ink-foreground) 1px, transparent 1px)",
-                backgroundSize: "36px 36px",
-              }}
-            />
-            <div className="absolute left-0 right-0 top-[56%] h-2 rotate-[-2deg] bg-primary/20 blur-[1px]" />
-            <div className="absolute left-[10%] right-[15%] top-[22%] h-px bg-ink-foreground/10" />
-            <div className="absolute left-[5%] right-[10%] top-[38%] h-px bg-ink-foreground/10" />
-            <div className="absolute left-[10%] right-[5%] top-[72%] h-px bg-ink-foreground/10" />
-            <div className="absolute bottom-0 left-[32%] top-0 w-px bg-ink-foreground/10" />
-            <div className="absolute bottom-0 left-[62%] top-0 w-px bg-ink-foreground/10" />
-            {staffPins.map((p) => {
-              const color = { primary: "bg-primary", muted: "bg-muted-foreground", success: "bg-success", warning: "bg-warning" }[p.tone];
-              return (
-                <div key={p.name} className="absolute flex items-center gap-2" style={{ left: p.left, top: p.top }}>
-                  <div className="relative">
-                    <div className={cn("h-3.5 w-3.5 rounded-full border-2 border-card", color)} />
-                    {p.live && <div className={cn("absolute -inset-2 animate-ping rounded-full opacity-20", color)} />}
-                  </div>
-                  <span className="rounded-full bg-card px-2 py-0.5 text-[11px] font-semibold text-foreground shadow">{p.name}</span>
-                </div>
-              );
-            })}
-            <div className="absolute bottom-3 left-3 flex items-center gap-2 rounded-full border border-ink-foreground/10 bg-ink/80 px-3 py-1.5 text-[11px] font-medium text-ink-foreground backdrop-blur">
-              <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-success" /> Zone 1 • 4 staff • GPS accuracy ±4m
-            </div>
+            <div className="absolute inset-0 opacity-[0.15]" style={{ backgroundImage: "linear-gradient(var(--ink-foreground) 1px, transparent 1px), linear-gradient(90deg, var(--ink-foreground) 1px, transparent 1px)", backgroundSize: "36px 36px" }} />
+            {gpsJobs.map((job) => (
+              <div key={job.id} className="absolute flex items-center gap-2" style={gpsPosition(job)}>
+                <span className="relative h-3.5 w-3.5 rounded-full border-2 border-card bg-primary"><span className="absolute -inset-2 animate-ping rounded-full bg-primary opacity-20" /></span>
+                <span className="max-w-40 truncate rounded-full bg-card px-2 py-0.5 text-[11px] font-semibold text-foreground shadow">{job.staff?.name ?? job.title}</span>
+              </div>
+            ))}
+            {!gpsJobs.length && <p className="absolute inset-0 grid place-items-center px-6 text-center text-sm text-muted-foreground">No active jobs with GPS coordinates.</p>}
+            {gpsJobs.length > 0 && <div className="absolute bottom-3 left-3 rounded-full border border-ink-foreground/10 bg-ink/80 px-3 py-1.5 text-[11px] font-medium text-ink-foreground backdrop-blur">Relative position • GPS from active jobs</div>}
           </div>
         </div>
 
         <div className={cn(card, "p-5")}>
           <div className="mb-4 flex items-center justify-between">
-            <h3 className="text-[14px] font-semibold">Recent Check-ins - Today</h3>
-            <span className="rounded-full bg-secondary px-2 py-1 text-[11px] font-medium text-muted-foreground">
-              {today.toLocaleDateString("en-GB", { day: "2-digit", month: "short" })}
-            </span>
+            <h3 className="text-[14px] font-semibold">Recent Check-ins — Today</h3>
+            <span className="rounded-full bg-secondary px-2 py-1 text-[11px] font-medium text-muted-foreground">{todayCheckins.length}</span>
           </div>
           <div className="space-y-3">
-            {recentCheckins.map((c) => (
-              <div key={c.name} className="flex items-center gap-3 rounded-xl border border-border p-2.5 transition hover:bg-accent">
-                <div className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-primary text-[11px] font-bold text-primary-foreground">{c.avatar}</div>
-                <div className="min-w-0 flex-1">
-                  <div className="truncate text-[13px] font-medium leading-tight">
-                    <span className="font-semibold">{c.name}</span> <span className="font-normal text-muted-foreground">@ {c.loc}</span>
-                  </div>
-                  <div className="mt-1 flex items-center gap-2">
-                    <span className="flex items-center gap-1 text-[11px] text-muted-foreground"><Clock3 className="h-3 w-3" /> {c.time}</span>
-                    <span
-                      className={cn(
-                        "inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-semibold",
-                        c.weak ? "border-warning-border bg-warning-soft text-warning-strong" : "border-success-border bg-success-soft text-success-strong",
-                      )}
-                    >
-                      <span className={cn("h-1 w-1 rounded-full", c.weak ? "bg-warning" : "bg-success")} /> {c.gps}
-                    </span>
+            {todayCheckins.slice(0, 6).map((job) => {
+              const cleanerName = job.staff?.name ?? "Unassigned";
+              const initials = cleanerName.split(/\s+/).map((part) => part[0]).join("").slice(0, 2).toUpperCase();
+              const hasGps = job.check_in_latitude !== null && job.check_in_longitude !== null;
+              return (
+                <div key={job.id} className="flex items-center gap-3 rounded-xl border border-border p-2.5 transition hover:bg-accent">
+                  <div className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-primary text-[11px] font-bold text-primary-foreground">{initials || "—"}</div>
+                  <div className="min-w-0 flex-1">
+                    <div className="truncate text-[13px] font-medium leading-tight"><span className="font-semibold">{cleanerName}</span> <span className="font-normal text-muted-foreground">@ {job.clients?.name ?? job.title}</span></div>
+                    <div className="mt-1 flex items-center gap-2">
+                      <span className="flex items-center gap-1 text-[11px] text-muted-foreground"><Clock3 className="h-3 w-3" /> {fmt(job.check_in_at)}</span>
+                      <span className={cn("rounded-full border px-2 py-0.5 text-[10px] font-semibold", hasGps ? "border-success-border bg-success-soft text-success-strong" : "border-warning-border bg-warning-soft text-warning-strong")}>{hasGps ? "GPS recorded" : "GPS unavailable"}</span>
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
+            {!todayCheckins.length && <p className="rounded-xl border border-dashed border-border p-8 text-center text-sm text-muted-foreground">No check-ins recorded today.</p>}
           </div>
-          <Link
-            to="/admin/$section"
-            params={{ section: "checkin" }}
-            className="mt-4 flex h-9 w-full items-center justify-center gap-1.5 rounded-xl border border-border bg-card text-[12px] font-semibold transition hover:bg-accent"
-          >
+          <Link to="/admin/$section" params={{ section: "checkin" }} className="mt-4 flex h-9 w-full items-center justify-center gap-1.5 rounded-xl border border-border bg-card text-[12px] font-semibold transition hover:bg-accent">
             View all check-ins <ArrowRight className="h-3.5 w-3.5" />
           </Link>
         </div>
@@ -242,77 +391,50 @@ function Overview() {
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <div className={cn(card, "p-5")}>
           <div className="mb-2 flex items-start justify-between gap-3">
-            <div>
-              <h3 className="text-[14px] font-semibold">Jobs completed — last 7 days</h3>
-              <p className="mt-1 text-[12px] text-muted-foreground">{completedJobsWeek.total} jobs with proof of service</p>
-            </div>
+            <div><h3 className="text-[14px] font-semibold">Jobs completed — last 7 days</h3><p className="mt-1 text-[12px] text-muted-foreground">{completedThisWeek.length} completed jobs</p></div>
             <span className="inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-primary-soft px-2.5 py-1 text-[11px] font-bold text-primary">
-              <TrendingUp className="h-3 w-3" /> {completedJobsWeek.change}
+              <TrendingUp className="h-3 w-3" /> {weekDifference > 0 ? `+${weekDifference}` : weekDifference} vs prior 7d
             </span>
           </div>
-          <div className="mt-4">
-            <div className="relative h-[160px] w-full text-primary">
-              <svg viewBox="0 0 340 140" className="h-full w-full" preserveAspectRatio="none">
-                <defs>
-                  <linearGradient id="jobsGrad" x1="0" x2="0" y1="0" y2="1">
-                    <stop offset="0%" stopColor="currentColor" stopOpacity="0.22" />
-                    <stop offset="100%" stopColor="currentColor" stopOpacity="0" />
-                  </linearGradient>
-                </defs>
-                <g stroke="var(--border)" strokeWidth="0.5">
-                  <line x1="0" y1="35" x2="340" y2="35" strokeDasharray="4 4" />
-                  <line x1="0" y1="70" x2="340" y2="70" strokeDasharray="4 4" />
-                  <line x1="0" y1="105" x2="340" y2="105" strokeDasharray="4 4" />
-                </g>
-                <path d="M0,85 C40,70 60,95 85,65 C115,38 135,52 170,48 C200,44 225,72 260,62 C295,52 315,18 340,28 L340,140 L0,140 Z" fill="url(#jobsGrad)" />
-                <path d="M0,85 C40,70 60,95 85,65 C115,38 135,52 170,48 C200,44 225,72 260,62 C295,52 315,18 340,28" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" />
-                {[[85, 65], [170, 48], [260, 62], [340, 28]].map(([cx, cy]) => (
-                  <circle key={cx} cx={cx} cy={cy} r="3.5" fill="currentColor" stroke="var(--card)" strokeWidth="2" />
-                ))}
-              </svg>
-            </div>
-            <div className="mt-3 flex justify-between px-1 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
-              {["Tue", "Wed", "Thu", "Fri", "Sat"].map((d) => <span key={d}>{d}</span>)}
-              <span className="font-bold text-foreground">Sun</span>
-            </div>
-          </div>
+          {completedThisWeek.length ? (
+            <>
+              <div className="mt-4 relative h-[160px] w-full text-primary">
+                <svg viewBox="0 0 340 140" className="h-full w-full" preserveAspectRatio="none" role="img" aria-label="Completed jobs per day">
+                  <defs><linearGradient id="jobsGrad" x1="0" x2="0" y1="0" y2="1"><stop offset="0%" stopColor="currentColor" stopOpacity="0.22" /><stop offset="100%" stopColor="currentColor" stopOpacity="0" /></linearGradient></defs>
+                  <g stroke="var(--border)" strokeWidth="0.5"><line x1="0" y1="35" x2="340" y2="35" strokeDasharray="4 4" /><line x1="0" y1="70" x2="340" y2="70" strokeDasharray="4 4" /><line x1="0" y1="105" x2="340" y2="105" strokeDasharray="4 4" /></g>
+                  <path d={areaPath} fill="url(#jobsGrad)" />
+                  <path d={linePath} fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
+                  {chartPoints.map((point, index) => <circle key={index} cx={point.x} cy={point.y} r="3.5" fill="currentColor" stroke="var(--card)" strokeWidth="2"><title>{point.count} completed</title></circle>)}
+                </svg>
+              </div>
+              <div className="mt-3 flex justify-between px-1 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+                {chartDays.map(({ date }) => <span key={date.toISOString()}>{date.toLocaleDateString("en-GB", { weekday: "short" })}</span>)}
+              </div>
+            </>
+          ) : <p className="py-12 text-center text-sm text-muted-foreground">No completed jobs in this period.</p>}
         </div>
 
         <div className={cn(card, "p-5")}>
           <div className="mb-4 flex items-center justify-between">
-            <h3 className="text-[14px] font-semibold">Jobs needing attention - {attentionJobs.length} open</h3>
-            <span className="grid h-6 w-6 place-items-center rounded-full border border-danger-border bg-danger-soft text-[11px] font-bold text-danger">
-              {attentionJobs.length}
-            </span>
+            <h3 className="text-[14px] font-semibold">Jobs needing attention — {attentionJobs.length}</h3>
+            <span className="grid h-6 w-6 place-items-center rounded-full border border-danger-border bg-danger-soft text-[11px] font-bold text-danger">{attentionJobs.length}</span>
           </div>
           <div className="space-y-3">
-            {attentionJobs.map((j) => {
-              const tone =
-                j.priority === "High" ? "border-danger-border bg-danger-soft text-danger-strong"
-                : j.priority === "Medium" ? "border-warning-border bg-warning-soft text-warning-strong"
-                : "border-border bg-secondary text-muted-foreground";
+            {attentionJobs.slice(0, 5).map(({ job, issue, priority }) => {
+              const tone = priority === "High" ? "border-danger-border bg-danger-soft text-danger-strong" : "border-warning-border bg-warning-soft text-warning-strong";
               return (
-                <div key={j.site} className="flex items-start gap-3 rounded-xl border border-border p-3 transition hover:bg-accent">
-                  <div className={cn("mt-0.5 grid h-8 w-8 place-items-center rounded-xl border", tone)}>
-                    <TriangleAlert className="h-4 w-4" />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <div className="truncate text-[13px] font-semibold">{j.site} - {j.issue}</div>
-                    <div className="mt-1 text-[11px] text-muted-foreground">{j.time} • auto-flagged</div>
-                  </div>
-                  <span className={cn("shrink-0 rounded-full border px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider", tone)}>
-                    {j.priority}
-                  </span>
+                <div key={job.id} className="flex items-start gap-3 rounded-xl border border-border p-3 transition hover:bg-accent">
+                  <div className={cn("mt-0.5 grid h-8 w-8 place-items-center rounded-xl border", tone)}><TriangleAlert className="h-4 w-4" /></div>
+                  <div className="min-w-0 flex-1"><div className="truncate text-[13px] font-semibold">{job.clients?.name ?? job.title} — {issue}</div><div className="mt-1 text-[11px] text-muted-foreground">{fmt(job.scheduled_date)} • {job.staff?.name ?? "Unassigned"}</div></div>
+                  <span className={cn("shrink-0 rounded-full border px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider", tone)}>{priority}</span>
                 </div>
               );
             })}
+            {!attentionJobs.length && <p className="rounded-xl border border-dashed border-border p-8 text-center text-sm text-muted-foreground">No jobs need attention.</p>}
           </div>
-          <button
-            onClick={() => toast("Opening attention queue")}
-            className="mt-4 flex h-9 w-full items-center justify-center gap-1.5 rounded-xl bg-ink text-[12px] font-semibold text-ink-foreground transition hover:bg-ink/90"
-          >
-            Review all <ArrowRight className="h-3.5 w-3.5" />
-          </button>
+          <Link to="/admin/$section" params={{ section: "reports" }} className="mt-4 flex h-9 w-full items-center justify-center gap-1.5 rounded-xl bg-ink text-[12px] font-semibold text-ink-foreground transition hover:bg-ink/90">
+            Review job reports <ArrowRight className="h-3.5 w-3.5" />
+          </Link>
         </div>
       </div>
     </div>
