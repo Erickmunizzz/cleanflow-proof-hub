@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "@tanstack/react-router";
-import { ChevronDown, CircleHelp, LogOut, Menu, Search, Settings, Users } from "lucide-react";
+import { ChevronDown, CircleHelp, LogOut, Menu, Search, Settings } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
@@ -51,7 +51,7 @@ export function AdminTopbar({ onToggleMenu }: { onToggleMenu: () => void }) {
 
     void loadAccount();
     const { data: { subscription } } = supabase.auth.onAuthStateChange(() => {
-      void loadAccount();
+      window.setTimeout(() => void loadAccount(), 0);
     });
     return () => {
       active = false;
@@ -154,14 +154,6 @@ export function AdminTopbar({ onToggleMenu }: { onToggleMenu: () => void }) {
                 <div className="truncate text-[11px] text-muted-foreground">{account?.email || "Signed out"}</div>
               </div>
               <div className="my-1 h-px bg-border" />
-              <Link
-                to="/admin/$section"
-                params={{ section: "settings" }}
-                onClick={() => setProfileOpen(false)}
-                className="flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-left text-[13px] hover:bg-accent"
-              >
-                <Users className="h-4 w-4" /> Profile
-              </Link>
               <Link
                 to="/admin/$section"
                 params={{ section: "settings" }}
