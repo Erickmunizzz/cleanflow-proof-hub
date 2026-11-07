@@ -1,18 +1,32 @@
 import { createContext, useContext, useEffect, useState, type ReactNode, Suspense } from "react";
 import type { Session } from "@supabase/supabase-js";
 import { Link, useRouter } from "@tanstack/react-router";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 
 const SessionContext = createContext<Session | null | undefined>(undefined);
+const AccountContext = createContext<{ name: string; email: string } | null>(null);
 export function AdminSessionProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>();
   const queryClient = useQueryClient();
   const router = useRouter();
   useEffect(() => {
     let active = true;
-    supabase.auth.getSession().then(({ data }) => { if (active) setSession(data.session); });
+    async function restoreSession() {
+      try {
+        const { data } = await supabase.auth.getSession();
+        if (!data.session) { if (active) setSession(null); return; }
+        const verified = await supabase.auth.getUser();
+        if (verified.error?.status === 401 || verified.error?.status === 403) {
+          await supabase.auth.signOut({ scope: "local" });
+          if (active) setSession(null);
+          return;
+        }
+        if (active) setSession(data.session);
+      } catch { if (active) setSession(null); }
+    }
+    void restoreSession();
     const { data } = supabase.auth.onAuthStateChange((event, next) => {
       if (!["SIGNED_IN", "SIGNED_OUT", "USER_UPDATED"].includes(event)) return;
       setSession(next);
@@ -22,9 +36,21 @@ export function AdminSessionProvider({ children }: { children: ReactNode }) {
     });
     return () => { active = false; data.subscription.unsubscribe(); };
   }, [queryClient, router]);
-  return <SessionContext.Provider value={session}>{children}</SessionContext.Provider>;
+  const accountQuery = useQuery({
+    queryKey: ["account-profile", session?.user.id],
+    enabled: Boolean(session),
+    queryFn: async () => {
+      if (!session) return null;
+      const { data, error } = await supabase.from("profiles").select("full_name").eq("id", session.user.id).maybeSingle();
+      if (error) throw new Error(error.message);
+      return data;
+    },
+  });
+  const account = session ? { name: accountQuery.data?.full_name?.trim() || session.user.email || "Account", email: session.user.email || "" } : null;
+  return <SessionContext.Provider value={session}><AccountContext.Provider value={account}>{children}</AccountContext.Provider></SessionContext.Provider>;
 }
 export const useAdminSession = () => useContext(SessionContext);
+export const useAdminAccount = () => useContext(AccountContext);
 export function AdminDataBoundary({ children }: { children: ReactNode }) {
   const session = useAdminSession();
   if (session === undefined) return <p className="text-sm text-muted-foreground">Loading…</p>;

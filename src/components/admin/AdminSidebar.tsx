@@ -1,11 +1,28 @@
-import { Link, useLocation } from "@tanstack/react-router";
+import { Link, useLocation, useNavigate } from "@tanstack/react-router";
+import { useQueryClient } from "@tanstack/react-query";
 import { LogOut, Zap } from "lucide-react";
 import { toast } from "sonner";
 import { adminNav } from "@/lib/admin-nav";
 import { cn } from "@/lib/utils";
+import { supabase } from "@/integrations/supabase/client";
+import { Button } from "@/components/ui/button";
+import { useAdminAccount, useAdminSession } from "./AdminSession";
 
 export function AdminSidebar({ open, onNavigate }: { open: boolean; onNavigate: () => void }) {
   const { pathname } = useLocation();
+  const account = useAdminAccount();
+  const session = useAdminSession();
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const initials = account?.name.split(/\s+/).filter(Boolean).slice(0, 2).map(part => part[0]?.toUpperCase()).join("") || "—";
+  async function signOut() {
+    await queryClient.cancelQueries();
+    queryClient.clear();
+    const { error } = await supabase.auth.signOut({ scope: "local" });
+    if (error) { toast.error(error.message); return; }
+    onNavigate();
+    await navigate({ to: "/auth", replace: true });
+  }
   const activeId = pathname === "/admin" || pathname === "/admin/" ? "overview" : pathname.split("/")[2];
 
   return (
@@ -82,23 +99,24 @@ export function AdminSidebar({ open, onNavigate }: { open: boolean; onNavigate: 
         </div>
         <div className="mt-3 flex items-center gap-2 px-2 py-2">
           <div className="flex h-7 w-7 items-center justify-center rounded-full bg-primary text-[12px] font-bold text-primary-foreground">
-            E
+            {initials}
           </div>
           <div className="min-w-0 flex-1">
-            <div className="truncate text-[13px] font-medium leading-none">elorwen</div>
-            <div className="text-[11px] text-muted-foreground">Admin • London</div>
+            <div className="truncate text-[13px] font-medium leading-none" title={account?.name}>{account?.name || (session === undefined ? "Loading…" : "Signed out")}</div>
+            <div className="text-[11px] text-muted-foreground">{account ? "Workspace account" : "CleanFlow UK"}</div>
           </div>
           <div className="grid h-7 w-7 place-items-center rounded-full bg-secondary">
-            <div className="h-2 w-2 animate-pulse rounded-full bg-success" />
+            <div className={cn("h-2 w-2 rounded-full", account ? "bg-success" : "bg-muted-foreground")} />
           </div>
         </div>
-        <button
-          onClick={() => toast("Sign-in will be added in a later step")}
+        <Button variant="ghost"
+          disabled={!session}
+          onClick={() => void signOut()}
           className="group mt-2 flex w-full items-center gap-2 rounded-xl border border-transparent px-2 py-2.5 text-[13px] font-medium text-muted-foreground transition hover:border-danger-border hover:bg-danger-soft hover:text-danger"
         >
           <LogOut className="h-4 w-4" />
           <span>Log out</span>
-        </button>
+        </Button>
       </div>
     </aside>
   );

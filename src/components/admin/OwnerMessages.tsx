@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/integrations/supabase/types";
 import { ownerContextOptions } from "@/lib/owner-context";
+import { readAllRows } from "@/lib/supabase-pages";
 
 type CleanerRecipient = Pick<Tables<"staff">, "id" | "name" | "email" | "profile_id">;
 type Message = Pick<Tables<"messages">, "id" | "sender_id" | "recipient_id" | "body" | "created_at">;
@@ -24,14 +25,13 @@ export function OwnerMessages() {
     enabled: Boolean(owner?.companyId),
     queryFn: async () => {
       if (!owner?.companyId) return [];
-      const { data, error } = await supabase
+      const data = await readAllRows((a, b) => supabase
         .from("staff")
         .select("id, name, email, profile_id")
         .eq("company_id", owner.companyId)
         .eq("is_active", true)
         .not("profile_id", "is", null)
-        .order("name");
-      if (error) throw error;
+        .order("name").order("id").range(a, b));
       return data as CleanerRecipient[];
     },
   });
@@ -51,16 +51,14 @@ export function OwnerMessages() {
     enabled: Boolean(owner && recipientProfileId),
     queryFn: async () => {
       if (!owner || !recipientProfileId) return [];
-      const { data, error } = await supabase
+      const data = await readAllRows((a, b) => supabase
         .from("messages")
         .select("id, sender_id, recipient_id, body, created_at")
         .eq("company_id", owner.companyId)
         .or(
           `and(sender_id.eq.${owner.ownerId},recipient_id.eq.${recipientProfileId}),and(sender_id.eq.${recipientProfileId},recipient_id.eq.${owner.ownerId})`,
         )
-        .order("created_at", { ascending: true })
-        .limit(500);
-      if (error) throw error;
+        .order("created_at", { ascending: true }).order("id").range(a, b));
       return data as Message[];
     },
   });
@@ -68,7 +66,7 @@ export function OwnerMessages() {
   useEffect(() => {
     if (!owner?.companyId) return;
     const channel = supabase
-      .channel(`owner-messages-${owner.companyId}-${recipientProfileId ?? "all"}`)
+      .channel(`owner-messages-${owner.companyId}-${Math.random().toString(36).slice(2)}`)
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "messages", filter: `company_id=eq.${owner.companyId}` },
@@ -116,35 +114,36 @@ export function OwnerMessages() {
         <label className="flex items-center gap-2 text-[13px] text-muted-foreground">
           Cleaner
           <select
-            className="h-10 min-w-[180px] rounded-xl border border-border bg-card px-3 text-foreground outline-none focus:border-primary"
+            className="h-10 w-full min-w-0 max-w-xs rounded-xl border border-border bg-card px-3 text-foreground outline-none focus:border-primary"
             value={selectedStaffId}
             onChange={(event) => setSelectedStaffId(event.target.value)}
             disabled={staffQuery.isLoading || staff.length === 0}
           >
-            {staff.length === 0 && <option value="">No linked cleaner accounts</option>}
+            {staff.length === 0 && <option value="">{staffQuery.isLoading ? "Loading staff…" : staffQuery.isError ? "Staff unavailable" : "No linked cleaner accounts"}</option>}
             {staff.map((person) => <option key={person.id} value={person.id}>{person.name}</option>)}
           </select>
         </label>
       </div>
 
       {staffQuery.isLoading && <p className="text-sm text-muted-foreground">Loading staff…</p>}
-      {staffQuery.isError && <p role="alert" className="text-sm text-danger">Couldn't load staff: {(staffQuery.error as Error).message}</p>}
+      {staffQuery.isError && <div role="alert" className="space-y-2 text-sm text-danger"><p>Couldn't load staff: {staffQuery.error.message}</p><Button variant="outline" onClick={() => void staffQuery.refetch()}>Try again</Button></div>}
       {!staffQuery.isLoading && !staffQuery.isError && staff.length === 0 && (
         <p className="rounded-xl border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
           No active staff account is linked to a cleaner profile yet.
         </p>
       )}
 
-      {recipientProfileId && (
+      <>
         <>
           <div
             className="flex h-[min(55vh,560px)] min-h-[280px] flex-col gap-3 overflow-y-auto rounded-xl bg-surface-2 p-4"
             aria-live="polite"
             aria-label={`Conversation with ${recipient?.name ?? "cleaner"}`}
           >
+            {!recipientProfileId && <p className="m-auto text-center text-sm text-muted-foreground">{staff.length ? "Select a cleaner to view messages." : "No conversation selected."}</p>}
             {conversationQuery.isLoading && <p className="text-sm text-muted-foreground">Loading conversation…</p>}
             {conversationQuery.isError && <p role="alert" className="text-sm text-danger">Couldn't load messages: {(conversationQuery.error as Error).message}</p>}
-            {!conversationQuery.isLoading && !conversationQuery.isError && messages.length === 0 && (
+            {recipientProfileId && !conversationQuery.isLoading && !conversationQuery.isError && messages.length === 0 && (
               <p className="m-auto text-center text-sm text-muted-foreground">No messages yet. Start the conversation.</p>
             )}
             {messages.map((message) => {
@@ -175,6 +174,7 @@ export function OwnerMessages() {
               placeholder={`Message ${recipient?.name ?? "cleaner"}…`}
               value={draft}
               maxLength={5000}
+              disabled={!recipientProfileId || send.isPending}
               onChange={(event) => setDraft(event.target.value)}
             />
             <Button type="submit" className="h-10 rounded-xl" disabled={send.isPending || !draft.trim() || !recipientProfileId}>
@@ -182,7 +182,7 @@ export function OwnerMessages() {
             </Button>
           </form>
         </>
-      )}
+      </>
     </section>
   );
 }

@@ -1,9 +1,11 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { ChevronDown, CircleHelp, LogOut, Menu, Search, Settings } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
+import { useAdminAccount } from "./AdminSession";
+import { Button } from "@/components/ui/button";
 
 const configItems = [
   "General settings",
@@ -14,50 +16,11 @@ const configItems = [
   "Resource categories",
 ];
 
-type Account = { name: string; email: string };
-
 export function AdminTopbar({ onToggleMenu }: { onToggleMenu: () => void }) {
   const [query, setQuery] = useState("");
   const [configOpen, setConfigOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
-  const [account, setAccount] = useState<Account | null>(null);
-
-  useEffect(() => {
-    let active = true;
-    const loadAccount = async () => {
-      const { data, error } = await supabase.auth.getUser();
-      if (!active) return;
-      if (error || !data.user) {
-        setAccount(null);
-        return;
-      }
-
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("full_name, role, is_active")
-        .eq("id", data.user.id)
-        .maybeSingle();
-
-      if (!active) return;
-      if (profile?.role === "owner" && profile.is_active) {
-        setAccount({
-          name: profile.full_name || data.user.email || "Owner",
-          email: data.user.email || "",
-        });
-      } else {
-        setAccount(null);
-      }
-    };
-
-    void loadAccount();
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(() => {
-      window.setTimeout(() => void loadAccount(), 0);
-    });
-    return () => {
-      active = false;
-      subscription.unsubscribe();
-    };
-  }, []);
+  const account = useAdminAccount();
 
   const signOut = async () => {
     const { error } = await supabase.auth.signOut();
@@ -78,9 +41,9 @@ export function AdminTopbar({ onToggleMenu }: { onToggleMenu: () => void }) {
 
   return (
     <header className="sticky top-0 z-30 flex h-16 items-center gap-3 border-b border-border bg-card/80 px-4 backdrop-blur-xl lg:px-6">
-      <button onClick={onToggleMenu} className="-ml-2 rounded-xl p-2 hover:bg-secondary lg:hidden" aria-label="Open menu">
+      <Button variant="ghost" size="icon" onClick={onToggleMenu} className="-ml-2 shrink-0 rounded-xl p-2 hover:bg-secondary lg:hidden" aria-label="Open menu">
         <Menu className="h-5 w-5" />
-      </button>
+      </Button>
       <div className="flex max-w-[640px] flex-1 items-center gap-3">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -103,7 +66,7 @@ export function AdminTopbar({ onToggleMenu }: { onToggleMenu: () => void }) {
         </a>
 
         <div className="relative">
-          <button
+          <Button variant="ghost" size="icon"
             onClick={() => { setConfigOpen(!configOpen); setProfileOpen(false); }}
             aria-label="System configuration"
             className={cn(
@@ -112,7 +75,7 @@ export function AdminTopbar({ onToggleMenu }: { onToggleMenu: () => void }) {
             )}
           >
             <Settings className="h-5 w-5" />
-          </button>
+          </Button>
           {configOpen && (
             <div className="absolute right-0 z-50 mt-2 w-[280px] rounded-2xl border border-border bg-popover p-2 shadow-xl">
               <div className="px-3 py-2 text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
@@ -136,7 +99,7 @@ export function AdminTopbar({ onToggleMenu }: { onToggleMenu: () => void }) {
         <div className="mx-1 h-6 w-px bg-border" />
 
         <div className="relative">
-          <button
+          <Button variant="ghost" aria-label="Account menu"
             onClick={() => { setProfileOpen(!profileOpen); setConfigOpen(false); }}
             className={cn(
               "flex items-center gap-2 rounded-full py-1 pl-1 pr-3 transition",
@@ -144,9 +107,9 @@ export function AdminTopbar({ onToggleMenu }: { onToggleMenu: () => void }) {
             )}
           >
             <div className="grid h-8 w-8 place-items-center rounded-full bg-primary text-[12px] font-bold text-primary-foreground">{initials}</div>
-            <span className="hidden max-w-32 truncate text-[13px] font-medium sm:block">{account?.name || "Owner"}</span>
+            <span className="hidden max-w-32 truncate text-[13px] font-medium sm:block">{account?.name || "Signed out"}</span>
             <ChevronDown className={cn("hidden h-4 w-4 transition sm:block", profileOpen && "rotate-180")} />
-          </button>
+          </Button>
           {profileOpen && (
             <div className="absolute right-0 z-50 mt-2 w-[220px] rounded-2xl border border-border bg-popover p-2 text-popover-foreground shadow-xl">
               <div className="px-3 py-2">

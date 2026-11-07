@@ -16,3 +16,5 @@
 - Initial sample records belong in conditional database migrations, never mount-time writes, to prevent duplicate records and privileged browser seeding.
 - Demo data lives in `src/lib/data/` so screens can switch to real data without UI changes.
 - Prototype colours are semantic tokens in `src/styles.css` (success/warning/danger/ink/primary-soft); never use raw Tailwind palette colours.
+- The root session provider owns identity and auth transitions; sidebar and topbar share its profile name to avoid conflicting account displays.
+- Paginate owner-facing lists with stable ordering; preserve explicit loading, error and empty states so failures never masquerade as missing records.

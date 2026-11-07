@@ -8,6 +8,9 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { ownerContextOptions } from "@/lib/owner-context";
 import { cn } from "@/lib/utils";
+import { AdminDataBoundary } from "@/components/admin/AdminSession";
+import { Button } from "@/components/ui/button";
+import { readAllRows } from "@/lib/supabase-pages";
 
 export const Route = createFileRoute("/admin/")({
   head: () => ({
@@ -16,9 +19,11 @@ export const Route = createFileRoute("/admin/")({
       { name: "description", content: "Live overview of jobs, check-ins and site operations for your cleaning team." },
       { property: "og:title", content: "Operations Overview — CleanFlow UK" },
       { property: "og:description", content: "Live overview of jobs, check-ins and site operations for your cleaning team." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
     ],
   }),
-  component: Overview,
+  component: () => <AdminDataBoundary><Overview /></AdminDataBoundary>,
 });
 
 type Tone = "success" | "warning" | "danger";
@@ -71,19 +76,19 @@ async function loadOverview(companyId: string) {
   }
 
   const [staffResult, clientsResult, materialsResult] = await Promise.all([
-    supabase.from("staff").select("id,name,profile_id,is_active").eq("company_id", companyId).order("name"),
+    readAllRows((a, b) => supabase.from("staff").select("id,name,profile_id,is_active").eq("company_id", companyId).order("name").order("id").range(a, b)),
     supabase.from("clients").select("id", { count: "exact", head: true }).eq("company_id", companyId),
-    supabase.from("materials").select("id,quantity").eq("company_id", companyId),
+    readAllRows((a, b) => supabase.from("materials").select("id,quantity").eq("company_id", companyId).order("id").range(a, b)),
   ]);
-  for (const result of [staffResult, clientsResult, materialsResult]) {
+  for (const result of [clientsResult]) {
     if (result.error) throw new Error(result.error.message);
   }
 
   return {
     jobs,
-    staff: (staffResult.data ?? []) as Staff[],
+    staff: staffResult as Staff[],
     customerCount: clientsResult.count ?? 0,
-    materials: (materialsResult.data ?? []) as Material[],
+    materials: materialsResult as Material[],
   };
 }
 
@@ -120,12 +125,15 @@ function Overview() {
   useEffect(() => {
     if (!companyId) return;
     const channel = supabase
-      .channel(`owner-overview-${companyId}`)
+      .channel(`owner-overview-${companyId}-${Math.random().toString(36).slice(2)}`)
       .on("postgres_changes", {
         event: "*", schema: "public", table: "jobs", filter: `company_id=eq.${companyId}`,
       }, () => {
         void queryClient.invalidateQueries({ queryKey: ["owner-overview", companyId] });
       })
+      .on("postgres_changes", { event: "*", schema: "public", table: "staff", filter: `company_id=eq.${companyId}` }, () => { void queryClient.invalidateQueries({ queryKey: ["owner-overview", companyId] }); })
+      .on("postgres_changes", { event: "*", schema: "public", table: "clients", filter: `company_id=eq.${companyId}` }, () => { void queryClient.invalidateQueries({ queryKey: ["owner-overview", companyId] }); })
+      .on("postgres_changes", { event: "*", schema: "public", table: "materials", filter: `company_id=eq.${companyId}` }, () => { void queryClient.invalidateQueries({ queryKey: ["owner-overview", companyId] }); })
       .subscribe();
     return () => { void supabase.removeChannel(channel); };
   }, [companyId, queryClient]);
@@ -135,11 +143,11 @@ function Overview() {
   }
   if (ownerQuery.isError || overviewQuery.isError) {
     const error = ownerQuery.error ?? overviewQuery.error;
-    return <div role="alert" className={cn(card, "p-6 text-[13px] text-danger")}>Couldn't load operations overview: {error.message}</div>;
+    return <div role="alert" className="space-y-4"><h1 className="text-[28px] font-bold">Operations Overview</h1><p className="text-sm text-danger">Couldn't load operations overview: {error?.message ?? "Workspace unavailable."}</p><Button onClick={() => { void ownerQuery.refetch(); void overviewQuery.refetch(); }}>Try again</Button></div>;
   }
 
   const data = overviewQuery.data;
-  if (!data) return null;
+  if (!data) return <div role="alert" className="space-y-4"><h1 className="text-[28px] font-bold">Operations Overview</h1><p className="text-sm text-muted-foreground">Your workspace could not be loaded.</p><Button onClick={() => { void ownerQuery.refetch(); }}>Try again</Button></div>;
 
   const now = new Date();
   const todayStart = startOfDay(now);
@@ -166,8 +174,8 @@ function Overview() {
   const activeJobs = data.jobs.filter((job) => statusOf(job) === "in_progress" && job.check_in_at && !job.check_out_at);
   const todayCheckins = data.jobs
     .filter((job) => job.check_in_at && inRange(job.check_in_at, todayStart, tomorrow))
-    .sort((a, b) => new Date(b.check_in_at!).getTime() - new Date(a.check_in_at!).getTime());
-  const attentionJobs = data.jobs.flatMap((job) => {
+    .sort((a, b) => new Date(b.check_in_at ?? "").getTime() - new Date(a.check_in_at ?? "").getTime());
+  const attentionJobs = data.jobs.flatMap<{ job: Job; issue: string; priority: "High" | "Medium" }>((job) => {
     const status = statusOf(job);
     const scheduled = new Date(job.scheduled_date);
     if (status === "scheduled" && scheduled < now) {
