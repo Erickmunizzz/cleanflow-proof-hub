@@ -17,7 +17,7 @@ export async function getOwnerContext(): Promise<OwnerContext> {
 
   if (profileError) throw new Error(profileError.message);
   if (!profile || profile.role !== "owner" || !profile.is_active) {
-    throw new Error("Active owner access is required.");
+    throw new Error("Your account does not have an active owner profile. Sign in with the owner account for this workspace.");
   }
 
   return { ownerId: profile.id, companyId: profile.company_id };

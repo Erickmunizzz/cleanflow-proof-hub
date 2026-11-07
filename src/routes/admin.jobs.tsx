@@ -3,12 +3,15 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { CheckSquare, Clock3, LogIn, LogOut, Plus, Square } from "lucide-react";
 import { toast } from "sonner";
-import type { Session } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import type { TablesUpdate } from "@/integrations/supabase/types";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 import { ownerContextOptions } from "@/lib/owner-context";
+import { AdminDataBoundary } from "@/components/admin/AdminSession";
+import { Button } from "@/components/ui/button";
+import { checklistSummary } from "@/lib/job-summary";
+import { readAllRows } from "@/lib/supabase-pages";
 
 export const Route = createFileRoute("/admin/jobs")({
   head: () => ({
@@ -48,25 +51,7 @@ const statusStyle: Record<string, string> = {
 const statusLabel: Record<string, string> = { scheduled: "Scheduled", in_progress: "In progress", completed: "Completed" };
 
 function JobsPage() {
-  const [session, setSession] = useState<Session | null | undefined>(undefined);
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => setSession(data.session));
-    const { data } = supabase.auth.onAuthStateChange((_e, s) => setSession(s));
-    return () => data.subscription.unsubscribe();
-  }, []);
-
-  if (session === undefined) return <div className="text-[13px] text-muted-foreground">Loading…</div>;
-  if (!session)
-    return (
-      <div className={cn(card, "p-10 text-center")}>
-        <div className="text-[15px] font-semibold">Sign in to view jobs</div>
-        <p className="mt-1 text-[13px] text-muted-foreground">Your job schedule is private to your team.</p>
-        <Link to="/auth" className="mt-5 inline-flex h-9 items-center rounded-xl bg-primary px-4 text-[13px] font-semibold text-primary-foreground hover:bg-primary/90">
-          Sign in
-        </Link>
-      </div>
-    );
-  return <JobsBoard />;
+  return <AdminDataBoundary><JobsBoard /></AdminDataBoundary>;
 }
 
 function JobsBoard() {
@@ -80,20 +65,19 @@ function JobsBoard() {
     enabled: Boolean(companyId),
     queryFn: async () => {
       if (!companyId) throw new Error("Owner company is unavailable.");
-      const { data, error } = await supabase
+      const data = await readAllRows((a, b) => supabase
         .from("jobs")
         .select("*, clients!jobs_customer_same_company_fkey(name), staff!jobs_staff_same_company_fkey(name)")
         .eq("company_id", companyId)
-        .order("scheduled_date", { ascending: true });
-      if (error) throw error;
-      return data as unknown as Job[];
+        .order("scheduled_date", { ascending: true }).order("id").range(a, b));
+      return data.map(job => ({ ...job, checklist: checklistSummary(job.checklist).items })) as Job[];
     },
   });
 
   useEffect(() => {
     if (!companyId) return;
     const channel = supabase
-      .channel(`owner-jobs-${companyId}`)
+      .channel(`owner-jobs-${companyId}-${Math.random().toString(36).slice(2)}`)
       .on("postgres_changes", { event: "*", schema: "public", table: "jobs", filter: `company_id=eq.${companyId}` }, () =>
         qc.invalidateQueries({ queryKey: ["jobs", companyId] }),
       )
@@ -103,15 +87,16 @@ function JobsBoard() {
 
   const update = useMutation({
     mutationFn: async ({ id, patch }: { id: string; patch: TablesUpdate<"jobs"> }) => {
-      const { error } = await supabase.from("jobs").update(patch).eq("id", id);
+      if (!companyId) throw new Error("Owner workspace is unavailable.");
+      const { error } = await supabase.from("jobs").update(patch).eq("id", id).eq("company_id", companyId).select("id").single();
       if (error) throw error;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["jobs"] }),
+    onSuccess: () => Promise.all([qc.invalidateQueries({ queryKey: ["jobs"] }), qc.invalidateQueries({ queryKey: ["admin-records"] }), qc.invalidateQueries({ queryKey: ["owner-overview"] })]),
     onError: (e: Error) => toast.error(e.message),
   });
 
   if (ownerContextQ.isLoading) return <div className="text-[13px] text-muted-foreground">Loading owner workspace…</div>;
-  if (ownerContextQ.isError) return <div role="alert" className={cn(card, "p-6 text-[13px] text-danger")}>{ownerContextQ.error.message}</div>;
+  if (ownerContextQ.isError || !companyId) return <div role="alert" className="space-y-4"><h1 className="text-[28px] font-bold">Jobs</h1><p className="text-sm text-danger">{ownerContextQ.error?.message ?? "Your workspace is unavailable."}</p><Button onClick={() => void ownerContextQ.refetch()}>Try again</Button></div>;
 
   const jobs = jobsQ.data ?? [];
 
@@ -127,15 +112,16 @@ function JobsBoard() {
         </button>
       </div>
 
-      {jobsQ.isError && <div className={cn(card, "p-6 text-[13px] text-danger")}>Couldn't load jobs: {(jobsQ.error as Error).message}</div>}
+      {jobsQ.isError && <div role="alert" className={cn(card, "space-y-3 p-6 text-[13px] text-danger")}>Couldn't load jobs: {jobsQ.error.message}<Button variant="outline" onClick={() => void jobsQ.refetch()}>Try again</Button></div>}
       {jobsQ.isLoading && <div className="text-[13px] text-muted-foreground">Loading jobs…</div>}
-      {!jobsQ.isLoading && jobs.length === 0 && (
+      {!jobsQ.isLoading && !jobsQ.isError && jobs.length === 0 && (
         <div className={cn(card, "p-10 text-center text-[13px] text-muted-foreground")}>No jobs scheduled yet. Add your first job.</div>
       )}
 
       <div className="grid gap-4 lg:grid-cols-2">
         {jobs.map((job) => {
-          const checklist = Array.isArray(job.checklist) ? job.checklist : [];
+          const checklist = job.checklist;
+          const status = job.status.toLowerCase().replaceAll("-", "_");
           const done = checklist.filter((c) => c.done).length;
           return (
             <div key={job.id} className={cn(card, "space-y-4 p-5")}>
@@ -146,8 +132,8 @@ function JobsBoard() {
                     {job.clients?.name ?? "No client"} • {job.staff?.name ?? "Unassigned"}
                   </div>
                 </div>
-                <span className={cn("rounded-full px-2.5 py-1 text-[11px] font-semibold", statusStyle[job.status] ?? "bg-muted text-muted-foreground")}>
-                  {statusLabel[job.status] ?? job.status}
+                <span className={cn("shrink-0 rounded-full px-2.5 py-1 text-[11px] font-semibold", statusStyle[status] ?? "bg-muted text-muted-foreground")}>
+                  {statusLabel[status] ?? job.status}
                 </span>
               </div>
 
@@ -162,9 +148,11 @@ function JobsBoard() {
                   <span>Checklist</span><span className="text-muted-foreground">{done}/{checklist.length}</span>
                 </div>
                 <div className="space-y-1">
+                  {!checklist.length && <p className="text-sm text-muted-foreground">No tasks recorded for this job.</p>}
                   {checklist.map((item, i) => (
                     <button
                       key={i}
+                      disabled={update.isPending}
                       onClick={() => {
                         const next = checklist.map((c, j) => (j === i ? { ...c, done: !c.done } : c));
                         update.mutate({ id: job.id, patch: { checklist: next } });
@@ -182,14 +170,14 @@ function JobsBoard() {
 
               <div className="flex gap-2">
                 <button
-                  disabled={!!job.check_in_at}
+                  disabled={update.isPending || !!job.check_in_at}
                   onClick={() => update.mutate({ id: job.id, patch: { check_in_at: new Date().toISOString(), status: "in_progress" } })}
                   className="flex h-9 flex-1 items-center justify-center gap-2 rounded-xl bg-primary text-[13px] font-semibold text-primary-foreground hover:bg-primary/90 disabled:opacity-40"
                 >
                   <LogIn className="h-4 w-4" /> Check in
                 </button>
                 <button
-                  disabled={!job.check_in_at || !!job.check_out_at}
+                  disabled={update.isPending || !job.check_in_at || !!job.check_out_at}
                   onClick={() => update.mutate({ id: job.id, patch: { check_out_at: new Date().toISOString(), status: "completed" } })}
                   className="flex h-9 flex-1 items-center justify-center gap-2 rounded-xl border border-border bg-card text-[13px] font-semibold hover:bg-accent disabled:opacity-40"
                 >
@@ -201,7 +189,7 @@ function JobsBoard() {
         })}
       </div>
 
-      <AddJobDialog open={open} onOpenChange={setOpen} companyId={ownerContextQ.data!.companyId} />
+      <AddJobDialog open={open} onOpenChange={setOpen} companyId={companyId} />
     </div>
   );
 }
@@ -215,23 +203,23 @@ function AddJobDialog({ open, onOpenChange, companyId }: { open: boolean; onOpen
     enabled: open,
     queryFn: async () => {
       const [c, s] = await Promise.all([
-        supabase.from("clients").select("id, name").eq("company_id", companyId).order("name"),
-        supabase.from("staff").select("id, name").eq("company_id", companyId).eq("is_active", true).not("profile_id", "is", null).order("name"),
+        readAllRows((a, b) => supabase.from("clients").select("id, name").eq("company_id", companyId).order("name").order("id").range(a, b)),
+        readAllRows((a, b) => supabase.from("staff").select("id, name").eq("company_id", companyId).eq("is_active", true).not("profile_id", "is", null).order("name").order("id").range(a, b)),
       ]);
-      if (c.error) throw c.error;
-      if (s.error) throw s.error;
-      return { clients: c.data, staff: s.data };
+      return { clients: c, staff: s };
     },
   });
 
   const create = useMutation({
     mutationFn: async () => {
+      const scheduled = new Date(form.scheduled_date);
+      if (!Number.isFinite(scheduled.getTime())) throw new Error("Enter a valid scheduled date.");
       const { error } = await supabase.from("jobs").insert({
         company_id: companyId,
         title: form.title,
         client_id: form.client_id || null,
         staff_id: form.staff_id || null,
-        scheduled_date: new Date(form.scheduled_date).toISOString(),
+        scheduled_date: scheduled.toISOString(),
         notes: form.notes || null,
         checklist: DEFAULT_CHECKLIST,
       });
@@ -240,6 +228,8 @@ function AddJobDialog({ open, onOpenChange, companyId }: { open: boolean; onOpen
     onSuccess: () => {
       toast.success("Job added");
       qc.invalidateQueries({ queryKey: ["jobs"] });
+      qc.invalidateQueries({ queryKey: ["admin-records"] });
+      qc.invalidateQueries({ queryKey: ["owner-overview"] });
       setForm({ title: "", client_id: "", staff_id: "", scheduled_date: "", notes: "" });
       onOpenChange(false);
     },
@@ -248,9 +238,13 @@ function AddJobDialog({ open, onOpenChange, companyId }: { open: boolean; onOpen
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="rounded-2xl">
+      <DialogContent className="max-h-[85dvh] overflow-y-auto rounded-2xl">
         <DialogHeader><DialogTitle>Add New Job</DialogTitle></DialogHeader>
         <form onSubmit={(e) => { e.preventDefault(); create.mutate(); }} className="space-y-3">
+          {people.isLoading && <p className="text-sm text-muted-foreground">Loading customers and staff…</p>}
+          {people.isError && <div role="alert" className="space-y-2 text-sm text-danger"><p>Couldn't load customers and staff: {people.error.message}</p><Button type="button" variant="outline" onClick={() => void people.refetch()}>Try again</Button></div>}
+          {people.isSuccess && !people.data.clients.length && <p className="text-sm text-muted-foreground">No customers found.</p>}
+          {people.isSuccess && !people.data.staff.length && <p className="text-sm text-muted-foreground">No active linked cleaner accounts found.</p>}
           <input className={input} required placeholder="Job title" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} />
           <select className={input} value={form.client_id} onChange={(e) => setForm({ ...form, client_id: e.target.value })}>
             <option value="">Select client</option>
@@ -265,9 +259,9 @@ function AddJobDialog({ open, onOpenChange, companyId }: { open: boolean; onOpen
             <input className={input} type="datetime-local" required value={form.scheduled_date} onChange={(e) => setForm({ ...form, scheduled_date: e.target.value })} />
           </label>
           <textarea className={cn(input, "h-20 py-2")} placeholder="Notes (optional)" value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} />
-          <button disabled={create.isPending} className="h-10 w-full rounded-xl bg-primary text-[13.5px] font-semibold text-primary-foreground hover:bg-primary/90 disabled:opacity-60">
+          <Button disabled={create.isPending || !people.isSuccess} className="h-10 w-full rounded-xl bg-primary text-[13.5px] font-semibold text-primary-foreground hover:bg-primary/90 disabled:opacity-60">
             {create.isPending ? "Saving…" : "Add job"}
-          </button>
+          </Button>
         </form>
       </DialogContent>
     </Dialog>
