@@ -134,7 +134,6 @@ export function OwnerMessages() {
       )}
 
       <>
-        <>
           <div
             className="flex h-[min(55vh,560px)] min-h-[280px] flex-col gap-3 overflow-y-auto rounded-xl bg-surface-2 p-4"
             aria-live="polite"
@@ -181,7 +180,6 @@ export function OwnerMessages() {
               <Send className="mr-2 size-4" /> Send
             </Button>
           </form>
-        </>
       </>
     </section>
   );

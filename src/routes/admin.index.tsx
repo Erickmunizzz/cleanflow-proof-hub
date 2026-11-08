@@ -68,6 +68,7 @@ async function loadOverview(companyId: string) {
       .select("id,title,status,scheduled_date,check_in_at,check_out_at,check_in_latitude,check_in_longitude,clients!jobs_customer_same_company_fkey(name,address),staff!jobs_staff_same_company_fkey(name)")
       .eq("company_id", companyId)
       .order("scheduled_date", { ascending: true })
+      .order("id")
       .range(start, start + 999);
     if (error) throw new Error(error.message);
     const page = (data ?? []) as unknown as Job[];
@@ -265,9 +266,9 @@ function Overview() {
           </p>
         </div>
         <div className="flex gap-2">
-          <button onClick={() => downloadJobs(data.jobs)} className="flex h-9 items-center gap-2 rounded-xl border border-border bg-card px-4 text-[13px] font-medium hover:bg-accent">
+          <Button variant="outline" onClick={() => downloadJobs(data.jobs)} className="flex h-9 items-center gap-2 rounded-xl border border-border bg-card px-4 text-[13px] font-medium hover:bg-accent">
             <Download className="h-4 w-4" /> Export jobs
-          </button>
+          </Button>
           <Link to="/admin/$section" params={{ section: "checkin" }} className="flex h-9 items-center gap-2 rounded-xl bg-primary px-4 text-[13px] font-semibold text-primary-foreground shadow-sm hover:bg-primary/90">
             <ClipboardCheck className="h-4 w-4" /> View Daily Tasks
           </Link>
