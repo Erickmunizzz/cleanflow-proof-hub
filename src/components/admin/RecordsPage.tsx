@@ -57,7 +57,7 @@ function RecordsContent({ kind, search, onSearch }: { kind: RecordKind; search: 
       return material({ data: { name, quantity: Number(form['quantity'] ?? 0), unit: form['unit'] ?? "" } });
     },
     onSuccess: async () => {
-      await Promise.all([qc.invalidateQueries({ queryKey: ["admin-records"] }), qc.invalidateQueries({ queryKey: ["job-pickers"] }), qc.invalidateQueries({ queryKey: ["message-staff"] })]);
+      await Promise.all([qc.invalidateQueries({ queryKey: ["admin-records"] }), qc.invalidateQueries({ queryKey: ["job-pickers"] }), qc.invalidateQueries({ queryKey: ["message-staff"] }), qc.invalidateQueries({ queryKey: ["owner-overview"] })]);
       setOpen(false); setForm({}); toast.success(`${c.singular} added`);
     },
     onError: (error: Error) => toast.error(error.message),
