@@ -6,9 +6,10 @@ import { AdminDataBoundary, useAdminSession } from "./AdminSession";
 import { adminRecordsOptions } from "@/lib/admin-records.query";
 import { checklistSummary, recordedHours, csvCell } from "@/lib/job-summary";
 import { OwnerMessages } from "@/components/admin/OwnerMessages";
+import { SchedulingCalendar } from "@/components/admin/SchedulingCalendar";
 
 export function OperationsSection({ section, label }: { section: string; label: string }) {
-  return <AdminDataBoundary>{section === "messages" ? <div className="space-y-6"><h1 className="text-[28px] font-bold">{label}</h1><OwnerMessages /></div> : <SectionContent section={section} label={label} />}</AdminDataBoundary>;
+  return <AdminDataBoundary>{section === "messages" ? <div className="space-y-6"><h1 className="text-[28px] font-bold">{label}</h1><OwnerMessages /></div> : section === "scheduling" ? <SchedulingCalendar /> : <SectionContent section={section} label={label} />}</AdminDataBoundary>;
 }
 const fmt = (value: string | null) => value ? new Date(value).toLocaleString("en-GB") : "—";
 function SectionContent({ section, label }: { section: string; label: string }) {
