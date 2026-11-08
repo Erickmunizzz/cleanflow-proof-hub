@@ -18,3 +18,4 @@
 - Prototype colours are semantic tokens in `src/styles.css` (success/warning/danger/ink/primary-soft); never use raw Tailwind palette colours.
 - The root session provider owns identity and auth transitions; sidebar and topbar share its profile name to avoid conflicting account displays.
 - Paginate owner-facing lists with stable ordering; preserve explicit loading, error and empty states so failures never masquerade as missing records.
+- Settings uses its own `/admin/settings` route and a typed, in-memory draft separate from company reads; draft edits never write unsupported database fields or imply operational policies are enforced.
