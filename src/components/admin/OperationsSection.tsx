@@ -2,7 +2,7 @@ import { useSuspenseQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { Download, ClipboardCheck, CalendarDays, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { AdminDataBoundary, useAdminSession } from "./AdminSession";
+import { AdminDataBoundary } from "./AdminSession";
 import { adminRecordsOptions } from "@/lib/admin-records.query";
 import { checklistSummary, recordedHours, csvCell } from "@/lib/job-summary";
 import { OwnerMessages } from "@/components/admin/OwnerMessages";
@@ -14,7 +14,6 @@ export function OperationsSection({ section, label }: { section: string; label: 
 const fmt = (value: string | null) => value ? new Date(value).toLocaleString("en-GB") : "—";
 function SectionContent({ section, label }: { section: string; label: string }) {
   const { data } = useSuspenseQuery(adminRecordsOptions);
-  const session = useAdminSession();
   const jobs = section === "reports" ? data.jobs.filter(job => job.status === "completed") : section === "checkin" ? data.jobs.filter(job => job.check_in_at || job.status !== "completed") : data.jobs;
   function exportJobs() {
     const contents = [["Job", "Customer", "Staff", "Status", "Scheduled", "Check-in", "Check-out", "Notes"], ...jobs.map(j => [j.title, j.clients?.name, j.staff?.name, j.status, j.scheduled_date, j.check_in_at, j.check_out_at, j.notes])].map(row => row.map(csvCell).join(",")).join("\r\n");
@@ -24,7 +23,6 @@ function SectionContent({ section, label }: { section: string; label: string }) 
   return <div className="space-y-6">
     <div className="flex flex-wrap items-center justify-between gap-3"><h1 className="text-[28px] font-bold">{label}</h1><div className="flex gap-2"><Button asChild variant="outline" className="rounded-xl"><Link to="/admin/jobs"><CalendarDays />Jobs</Link></Button>{!["keys", "messages", "settings"].includes(section) && <Button onClick={exportJobs} variant="outline" className="rounded-xl"><Download />Export jobs</Button>}</div></div>
     {section === "structure" ? <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">{data.staff.map(person => <div key={person.id} className="rounded-xl border border-border bg-card p-5 shadow-card"><Users className="mb-4 size-6 text-primary" /><h2 className="font-semibold">{person.name}</h2><p className="mt-1 text-sm text-muted-foreground">{person.role ?? "No role recorded"}</p><p className="mt-3 break-all text-sm">{person.email ?? "—"}</p></div>)}{!data.staff.length && <p className="text-sm text-muted-foreground">No staff records.</p>}</div>
-    : section === "settings" ? <dl className="grid max-w-xl grid-cols-[auto_1fr] gap-x-6 gap-y-4 border-y border-border py-6 text-sm"><dt className="text-muted-foreground">Account</dt><dd className="break-all">{session?.user.email}</dd><dt className="text-muted-foreground">Language</dt><dd>English (UK)</dd><dt className="text-muted-foreground">Customers</dt><dd>{data.clients.length}</dd><dt className="text-muted-foreground">Staff</dt><dd>{data.staff.length}</dd><dt className="text-muted-foreground">Materials</dt><dd>{data.materials.length}</dd></dl>
     : section === "messages" ? <OwnerMessages />
     : section === "keys" ? <div className="border-y border-border py-8"><p className="text-sm text-muted-foreground">No key register is configured.</p><div className="mt-6 space-y-4">{data.clients.map(client => <div key={client.id}><h2 className="font-semibold">{client.name}</h2><p className="text-sm text-muted-foreground">{client.address ?? "No address recorded"}</p></div>)}</div></div>
     : section === "client-portal" ? <div className="space-y-4"><p className="text-sm text-muted-foreground">Internal customer job records. Customer access is not enabled.</p>{data.clients.map(client => <div key={client.id} className="border-b border-border py-4"><h2 className="font-semibold">{client.name}</h2><p className="mt-2 text-sm text-muted-foreground">{data.jobs.filter(job => job.client_id === client.id).length} jobs</p>{data.jobs.filter(job => job.client_id === client.id).map(job => <div key={job.id} className="mt-2 flex justify-between gap-3 text-sm"><span>{job.title}</span><span className="text-muted-foreground">{job.status.replaceAll("_", " ")}</span></div>)}</div>)}</div>

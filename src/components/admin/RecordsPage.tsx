@@ -74,22 +74,22 @@ function RecordsContent({ kind, search, onSearch }: { kind: RecordKind; search: 
 
   const save = useMutation({
     mutationFn: async () => {
-      const name = form.name ?? "";
-      const email = form.email ?? "";
-      const phone = form.phone ?? "";
+      const name = form["name"] ?? "";
+      const email = form["email"] ?? "";
+      const phone = form["phone"] ?? "";
       if (kind === "customers") {
-        const payload = { name, email, phone, address: form.address ?? "" };
+        const payload = { name, email, phone, address: form["address"] ?? "" };
         return editingId
           ? updateCustomerFn({ data: { id: editingId, data: payload } })
           : addCustomerFn({ data: payload });
       }
       if (kind === "staff") {
-        const payload = { name, email, phone, role: form.role ?? "", profile_id: form.profile_id ?? "" };
+        const payload = { name, email, phone, role: form["role"] ?? "", profile_id: form["profile_id"] ?? "" };
         return editingId
           ? updateStaffFn({ data: { id: editingId, data: payload } })
           : addStaffFn({ data: payload });
       }
-      const payload = { name, quantity: Number(form.quantity ?? 0), unit: form.unit ?? "" };
+      const payload = { name, quantity: Number(form["quantity"] ?? 0), unit: form["unit"] ?? "" };
       return editingId
         ? updateMaterialFn({ data: { id: editingId, data: payload } })
         : addMaterialFn({ data: payload });
@@ -129,7 +129,7 @@ function RecordsContent({ kind, search, onSearch }: { kind: RecordKind; search: 
     const values = row as unknown as Record<string, unknown>;
     const nextForm: Record<string, string> = {};
     for (const field of configItem.fields) nextForm[field] = String(values[field] ?? "");
-    if (kind === "staff") nextForm.profile_id = String(values.profile_id ?? "");
+    if (kind === "staff") nextForm["profile_id"] = String(values["profile_id"] ?? "");
     setEditingId(row.id);
     setForm(nextForm);
     save.reset();
@@ -137,7 +137,7 @@ function RecordsContent({ kind, search, onSearch }: { kind: RecordKind; search: 
   }
 
   const deleteName = deleteTarget
-    ? String((deleteTarget as unknown as Record<string, unknown>).name ?? configItem.singular.toLowerCase())
+    ? String((deleteTarget as unknown as Record<string, unknown>)["name"] ?? configItem.singular.toLowerCase())
     : "";
 
   return <div className="space-y-6">
@@ -153,8 +153,8 @@ function RecordsContent({ kind, search, onSearch }: { kind: RecordKind; search: 
           const value = (row as unknown as Record<string, unknown>)[field];
           return <td key={field} className="max-w-[300px] break-words px-5 py-4">{index === 0 ? <span className="flex items-center gap-3 font-semibold"><span className="grid size-8 shrink-0 place-items-center rounded-lg bg-primary-soft text-primary"><Icon className="size-4" /></span>{String(value ?? "—")}</span> : String(value ?? "—")}</td>;
         })}<td className="px-5 py-4"><div className="flex justify-end gap-1">
-          <button type="button" aria-label={`Edit ${configItem.singular.toLowerCase()} ${String((row as unknown as Record<string, unknown>).name ?? "")}`} disabled={save.isPending || remove.isPending} onClick={() => startEdit(row)} className="grid size-9 place-items-center rounded-lg text-muted-foreground hover:bg-primary-soft hover:text-primary disabled:opacity-50"><Pencil className="size-4" /></button>
-          <button type="button" aria-label={`Delete ${configItem.singular.toLowerCase()} ${String((row as unknown as Record<string, unknown>).name ?? "")}`} disabled={save.isPending || remove.isPending} onClick={() => { remove.reset(); setDeleteTarget(row); }} className="grid size-9 place-items-center rounded-lg text-muted-foreground hover:bg-danger-soft hover:text-danger disabled:opacity-50"><Trash2 className="size-4" /></button>
+          <button type="button" aria-label={`Edit ${configItem.singular.toLowerCase()} ${String((row as unknown as Record<string, unknown>)["name"] ?? "")}`} disabled={save.isPending || remove.isPending} onClick={() => startEdit(row)} className="grid size-9 place-items-center rounded-lg text-muted-foreground hover:bg-primary-soft hover:text-primary disabled:opacity-50"><Pencil className="size-4" /></button>
+          <button type="button" aria-label={`Delete ${configItem.singular.toLowerCase()} ${String((row as unknown as Record<string, unknown>)["name"] ?? "")}`} disabled={save.isPending || remove.isPending} onClick={() => { remove.reset(); setDeleteTarget(row); }} className="grid size-9 place-items-center rounded-lg text-muted-foreground hover:bg-danger-soft hover:text-danger disabled:opacity-50"><Trash2 className="size-4" /></button>
         </div></td></tr>)}</tbody>
       </table>
       {!rows.length && <p className="py-12 text-center text-sm text-muted-foreground">{search ? "No matching records." : `No ${kind} yet.`}</p>}
@@ -167,7 +167,7 @@ function RecordsContent({ kind, search, onSearch }: { kind: RecordKind; search: 
           {configItem.fields.map(field => <div key={field} className="space-y-2"><Label htmlFor={`record-${field}`} className="capitalize">{field}{field === "name" && " *"}</Label><Input id={`record-${field}`} type={field === "email" ? "email" : field === "quantity" ? "number" : field === "phone" ? "tel" : "text"} min={field === "quantity" ? 0 : undefined} step={field === "quantity" ? "any" : undefined} required={field === "name" || field === "quantity"} value={form[field] ?? (field === "quantity" ? "0" : "")} onChange={event => setForm(previous => ({ ...previous, [field]: event.target.value }))} className="rounded-xl" /></div>)}
           {kind === "staff" && <div className="space-y-2">
             <Label htmlFor="record-profile">Cleaner login</Label>
-            <select id="record-profile" value={form.profile_id ?? ""} onChange={event => setForm(previous => ({ ...previous, profile_id: event.target.value }))} className="h-10 w-full rounded-xl border border-border bg-card px-3 text-sm outline-none focus:border-primary">
+            <select id="record-profile" value={form["profile_id"] ?? ""} onChange={event => setForm(previous => ({ ...previous, profile_id: event.target.value }))} className="h-10 w-full rounded-xl border border-border bg-card px-3 text-sm outline-none focus:border-primary">
               <option value="">Not linked</option>
               {cleanerProfiles.data?.map(profile => <option key={profile.id} value={profile.id}>{profile.full_name}</option>)}
             </select>
