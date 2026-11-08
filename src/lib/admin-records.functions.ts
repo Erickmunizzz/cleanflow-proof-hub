@@ -1,5 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { z } from "zod";
 import type { Database } from "@/integrations/supabase/types";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { customerSchema, staffSchema, materialSchema } from "./admin-records.schema";
@@ -72,5 +73,77 @@ export const addMaterial = createServerFn({ method: "POST" }).middleware([requir
     const companyId = await getOwnerCompanyId(context.supabase, context.userId);
     const result = await context.supabase.from("materials").insert({ ...data, company_id: companyId }).select().single();
     if (result.error) throw new Error(result.error.message);
+    return result.data;
+  });
+
+const recordIdSchema = z.string().uuid();
+
+function throwDeleteError(error: { code?: string; message: string }, recordLabel: string): never {
+  if (error.code === "23503") {
+    throw new Error(`This ${recordLabel} is linked to existing jobs. Reassign those jobs before deleting this record.`);
+  }
+  throw new Error(error.message);
+}
+
+export const updateCustomer = createServerFn({ method: "POST" }).middleware([requireSupabaseAuth])
+  .inputValidator(z.object({ id: recordIdSchema, data: customerSchema }))
+  .handler(async ({ data, context }) => {
+    const companyId = await getOwnerCompanyId(context.supabase, context.userId);
+    const result = await context.supabase.from("clients").update(data.data)
+      .eq("id", data.id).eq("company_id", companyId).select().single();
+    if (result.error) throw new Error(result.error.message);
+    return result.data;
+  });
+
+export const deleteCustomer = createServerFn({ method: "POST" }).middleware([requireSupabaseAuth])
+  .inputValidator(z.object({ id: recordIdSchema }))
+  .handler(async ({ data, context }) => {
+    const companyId = await getOwnerCompanyId(context.supabase, context.userId);
+    const result = await context.supabase.from("clients").delete()
+      .eq("id", data.id).eq("company_id", companyId).select("id").maybeSingle();
+    if (result.error) throwDeleteError(result.error, "customer");
+    if (!result.data) throw new Error("Customer not found in this workspace.");
+    return result.data;
+  });
+
+export const updateStaff = createServerFn({ method: "POST" }).middleware([requireSupabaseAuth])
+  .inputValidator(z.object({ id: recordIdSchema, data: staffSchema }))
+  .handler(async ({ data, context }) => {
+    const companyId = await getOwnerCompanyId(context.supabase, context.userId);
+    const result = await context.supabase.from("staff").update(data.data)
+      .eq("id", data.id).eq("company_id", companyId).select().single();
+    if (result.error) throw new Error(result.error.message);
+    return result.data;
+  });
+
+export const deleteStaff = createServerFn({ method: "POST" }).middleware([requireSupabaseAuth])
+  .inputValidator(z.object({ id: recordIdSchema }))
+  .handler(async ({ data, context }) => {
+    const companyId = await getOwnerCompanyId(context.supabase, context.userId);
+    const result = await context.supabase.from("staff").delete()
+      .eq("id", data.id).eq("company_id", companyId).select("id").maybeSingle();
+    if (result.error) throwDeleteError(result.error, "staff member");
+    if (!result.data) throw new Error("Staff member not found in this workspace.");
+    return result.data;
+  });
+
+export const updateMaterial = createServerFn({ method: "POST" }).middleware([requireSupabaseAuth])
+  .inputValidator(z.object({ id: recordIdSchema, data: materialSchema }))
+  .handler(async ({ data, context }) => {
+    const companyId = await getOwnerCompanyId(context.supabase, context.userId);
+    const result = await context.supabase.from("materials").update(data.data)
+      .eq("id", data.id).eq("company_id", companyId).select().single();
+    if (result.error) throw new Error(result.error.message);
+    return result.data;
+  });
+
+export const deleteMaterial = createServerFn({ method: "POST" }).middleware([requireSupabaseAuth])
+  .inputValidator(z.object({ id: recordIdSchema }))
+  .handler(async ({ data, context }) => {
+    const companyId = await getOwnerCompanyId(context.supabase, context.userId);
+    const result = await context.supabase.from("materials").delete()
+      .eq("id", data.id).eq("company_id", companyId).select("id").maybeSingle();
+    if (result.error) throw new Error(result.error.message);
+    if (!result.data) throw new Error("Material not found in this workspace.");
     return result.data;
   });
