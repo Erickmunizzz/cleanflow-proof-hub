@@ -17,6 +17,7 @@ import { Route as AdminSectionRouteImport } from './routes/admin.$section'
 import { Route as AdminCustomersRouteImport } from './routes/admin.customers'
 import { Route as AdminEmployeesRouteImport } from './routes/admin.employees'
 import { Route as AdminJobsRouteImport } from './routes/admin.jobs'
+import { Route as AdminSettingsRouteImport } from './routes/admin.settings'
 import { Route as AdminStorageRouteImport } from './routes/admin.storage'
 
 const IndexRoute = IndexRouteImport.update({
@@ -59,6 +60,11 @@ const AdminJobsRoute = AdminJobsRouteImport.update({
   path: '/jobs',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminSettingsRoute = AdminSettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
+  getParentRoute: () => AdminRoute,
+} as any)
 const AdminStorageRoute = AdminStorageRouteImport.update({
   id: '/storage',
   path: '/storage',
@@ -73,6 +79,7 @@ export interface FileRoutesByFullPath {
   '/admin/customers': typeof AdminCustomersRoute
   '/admin/employees': typeof AdminEmployeesRoute
   '/admin/jobs': typeof AdminJobsRoute
+  '/admin/settings': typeof AdminSettingsRoute
   '/admin/storage': typeof AdminStorageRoute
   '/admin/': typeof AdminIndexRoute
 }
@@ -83,6 +90,7 @@ export interface FileRoutesByTo {
   '/admin/customers': typeof AdminCustomersRoute
   '/admin/employees': typeof AdminEmployeesRoute
   '/admin/jobs': typeof AdminJobsRoute
+  '/admin/settings': typeof AdminSettingsRoute
   '/admin/storage': typeof AdminStorageRoute
   '/admin': typeof AdminIndexRoute
 }
@@ -95,6 +103,7 @@ export interface FileRoutesById {
   '/admin/customers': typeof AdminCustomersRoute
   '/admin/employees': typeof AdminEmployeesRoute
   '/admin/jobs': typeof AdminJobsRoute
+  '/admin/settings': typeof AdminSettingsRoute
   '/admin/storage': typeof AdminStorageRoute
   '/admin/': typeof AdminIndexRoute
 }
@@ -108,6 +117,7 @@ export interface FileRouteTypes {
     | '/admin/customers'
     | '/admin/employees'
     | '/admin/jobs'
+    | '/admin/settings'
     | '/admin/storage'
     | '/admin/'
   fileRoutesByTo: FileRoutesByTo
@@ -118,6 +128,7 @@ export interface FileRouteTypes {
     | '/admin/customers'
     | '/admin/employees'
     | '/admin/jobs'
+    | '/admin/settings'
     | '/admin/storage'
     | '/admin'
   id:
@@ -129,6 +140,7 @@ export interface FileRouteTypes {
     | '/admin/customers'
     | '/admin/employees'
     | '/admin/jobs'
+    | '/admin/settings'
     | '/admin/storage'
     | '/admin/'
   fileRoutesById: FileRoutesById
@@ -197,6 +209,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminJobsRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/settings': {
+      id: '/admin/settings'
+      path: '/settings'
+      fullPath: '/admin/settings'
+      preLoaderRoute: typeof AdminSettingsRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/admin/storage': {
       id: '/admin/storage'
       path: '/storage'
@@ -212,6 +231,7 @@ interface AdminRouteChildren {
   AdminCustomersRoute: typeof AdminCustomersRoute
   AdminEmployeesRoute: typeof AdminEmployeesRoute
   AdminJobsRoute: typeof AdminJobsRoute
+  AdminSettingsRoute: typeof AdminSettingsRoute
   AdminStorageRoute: typeof AdminStorageRoute
   AdminIndexRoute: typeof AdminIndexRoute
 }
@@ -221,6 +241,7 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminCustomersRoute: AdminCustomersRoute,
   AdminEmployeesRoute: AdminEmployeesRoute,
   AdminJobsRoute: AdminJobsRoute,
+  AdminSettingsRoute: AdminSettingsRoute,
   AdminStorageRoute: AdminStorageRoute,
   AdminIndexRoute: AdminIndexRoute,
 }
