@@ -52,14 +52,14 @@ export function WageListing({ companyId }: { companyId: string }) {
   const [appliedTypes, setAppliedTypes] = useState(workTypes);
   const [editingJob, setEditingJob] = useState<Job | null>(null);
   const [page, setPage] = useState(0);
-  const valid = Boolean(start && end && start <= end);
+  const valid = Boolean(start && end && start <= end && Date.parse(end) - Date.parse(start) <= 360 * 86_400_000);
   const effectiveStart = valid && flags.firstWeek ? mondayOf(start) : start;
 
   const summary = useQuery({
     queryKey: ["finance", companyId, "wage-listing", start, effectiveStart, end, flags.cancelled],
     enabled: valid,
     queryFn: async () => {
-      const [staff, jobs, rates, absences] = await Promise.all([
+      const [staff, jobs, rates, absences, preference, premiums] = await Promise.all([
         readAllRows((a, b) => supabase.from("staff").select("id,name,is_active")
           .eq("company_id", companyId).order("name").order("id").range(a, b)),
         readAllRows((a, b) => supabase.rpc("wage_listing", {
@@ -70,8 +70,13 @@ export function WageListing({ companyId }: { companyId: string }) {
         readAllRows((a, b) => supabase.from("staff_absences").select("id,staff_id,absence_type,start_date,end_date")
           .eq("company_id", companyId).eq("status", "approved").lte("start_date", end).gte("end_date", effectiveStart)
           .order("start_date").order("id").range(a, b)),
+        supabase.from("company_wage_preferences").select("base_hourly_rate").eq("company_id", companyId).maybeSingle(),
+        readAllRows((a, b) => supabase.rpc("wage_rule_premiums", {
+          target_company: companyId, period_start: effectiveStart, period_end: end,
+        }).order("job_id").range(a, b)),
       ]);
-      return { staff, jobs, rates, absences };
+      if (preference.error) throw new Error(preference.error.message);
+      return { staff, jobs, rates, absences, base: preference.data?.base_hourly_rate ?? null, premiums };
     },
   });
 
@@ -81,13 +86,16 @@ export function WageListing({ companyId }: { companyId: string }) {
     appliedTypes.includes(job.work_type ?? "Unclassified"),
   );
   const rates = new Map(summary.data?.rates.map(row => [row.staff_id, row.hourly_rate]));
+  const premiums = new Map(summary.data?.premiums.map(row => [row.job_id, row]));
   const employees = new Map(summary.data?.staff.map(row => [row.id, row]));
-  const groups = new Map<string, { staffId: string; workplace: string | null; jobs: Job[]; hours: number; supplement: number }>();
+  const groups = new Map<string, { staffId: string; workplace: string | null; jobs: Job[]; hours: number; supplement: number; premiumHours: number }>();
   for (const job of visibleJobs) {
     const key = JSON.stringify([job.staff_id, job.client_id]);
-    const group = groups.get(key) ?? { staffId: job.staff_id, workplace: job.workplace, jobs: [], hours: 0, supplement: 0 };
+    const group = groups.get(key) ?? { staffId: job.staff_id, workplace: job.workplace, jobs: [], hours: 0, supplement: 0, premiumHours: 0 };
     group.jobs.push(job);
     group.hours += Number(job.hours);
+    const premium = premiums.get(job.job_id);
+    if (premium) group.premiumHours += Number(premium.premium_hours) + (flags.overtime ? Number(premium.overtime_premium_hours) : 0);
     group.supplement += supplements.reduce((total, kind) => total + (flags[kind] ? Number(job[kind]) : 0), 0);
     groups.set(key, group);
   }
@@ -96,7 +104,7 @@ export function WageListing({ companyId }: { companyId: string }) {
   for (const staff of summary.data?.staff ?? []) {
     if ((employee && staff.id !== employee) || staffWithJobs.has(staff.id)) continue;
     if (staffOnLeave.has(staff.id) || (flags.empty && (staff.is_active || staff.id === employee))) {
-      groups.set(staff.id, { staffId: staff.id, workplace: null, jobs: [], hours: 0, supplement: 0 });
+      groups.set(staff.id, { staffId: staff.id, workplace: null, jobs: [], hours: 0, supplement: 0, premiumHours: 0 });
     }
   }
   const rows = [...groups.entries()].sort(([, a], [, b]) => {
@@ -147,7 +155,7 @@ export function WageListing({ companyId }: { companyId: string }) {
           <h2 className="font-semibold">Listing Information</h2>
           {valid && <span className="text-xs text-muted-foreground">Period {dateLabel(effectiveStart)} – {dateLabel(end)}</span>}
         </header>
-        {!valid ? <p role="alert" className="p-4">Choose a valid date range.</p> :
+        {!valid ? <p role="alert" className="p-4">Choose a valid date range of up to 361 days.</p> :
           summary.isPending ? <p role="status" className="p-4">Loading worked hours…</p> :
           summary.error ? <p role="alert" className="p-4 text-danger">{summary.error.message}</p> :
           <>
@@ -158,14 +166,16 @@ export function WageListing({ companyId }: { companyId: string }) {
                 </tr></thead>
                 <tbody>{rows.slice(currentPage * 25, (currentPage + 1) * 25).map(([key, row]) => {
                   const name = employees.get(row.staffId)?.name ?? "Employee unavailable";
-                  const rate = rates.get(row.staffId);
+                  const override = rates.get(row.staffId);
+                  const rate = override ?? summary.data.base;
+                  const supplement = row.supplement + row.premiumHours * (rate ?? 0);
                   const absences = summary.data.absences.filter(a => a.staff_id === row.staffId);
                   return <tr key={key} className="border-t border-border align-top">
                     <td className="p-3">
                       <details>
                         <summary className="flex cursor-pointer list-none items-center gap-1 font-semibold">{name}<ChevronDown className="size-3" /></summary>
                         <div className="mt-2 space-y-2">
-                          <RateForm key={`${start}-${end}-${rate}`} companyId={companyId} staffId={row.staffId} start={start} end={end} rate={rate} />
+                          <RateForm key={`${start}-${end}-${override}`} companyId={companyId} staffId={row.staffId} start={start} end={end} rate={override} />
                           {row.jobs.map(job => <button key={job.job_id} type="button" className="flex items-center gap-1 text-left text-xs text-primary underline"
                             onClick={() => setEditingJob(job)}><SlidersHorizontal className="size-3 shrink-0" />{job.title} · {job.work_type ?? "Unclassified"}</button>)}
                         </div>
@@ -176,8 +186,8 @@ export function WageListing({ companyId }: { companyId: string }) {
                     <td className="p-3 tabular-nums">{hoursFormat.format(row.hours)}h
                       {row.jobs.some(job => job.status !== "completed") && <p className="text-xs text-muted-foreground">Includes cancelled tasks</p>}
                     </td>
-                    <td className="p-3 tabular-nums">{row.supplement ? <span className="rounded bg-success-soft px-2 py-1 text-success-strong">+{money.format(row.supplement)}</span> : "—"}</td>
-                    <td className="p-3 font-semibold tabular-nums">{rate === undefined && row.hours > 0 ? "Rate required" : money.format(row.hours * (rate ?? 0) + row.supplement)}</td>
+                    <td className="p-3 tabular-nums">{supplement ? <span className="rounded bg-success-soft px-2 py-1 text-success-strong">+{money.format(supplement)}</span> : "—"}</td>
+                    <td className="p-3 font-semibold tabular-nums">{rate === null && row.hours > 0 ? "Rate required" : money.format(row.hours * (rate ?? 0) + supplement)}</td>
                   </tr>;
                 })}</tbody>
               </table>
@@ -187,7 +197,7 @@ export function WageListing({ companyId }: { companyId: string }) {
               <Button variant="outline" disabled={!currentPage} onClick={() => setPage(currentPage - 1)}>Previous</Button>
               <Button variant="outline" disabled={(currentPage + 1) * 25 >= rows.length} onClick={() => setPage(currentPage + 1)}>Next</Button>
             </footer>}
-            <p className="border-t border-border p-4 text-xs text-muted-foreground">Totals are estimates from completed check-ins, saved rates and selected supplements. Cancelled tasks contribute zero hours. Approved absences are informational.</p>
+            <p className="border-t border-border p-4 text-xs text-muted-foreground">Totals use completed check-ins, the employee rate or company base rate, the highest applicable premium, and selected fixed supplements. Overtime is counted per London Monday–Sunday week. Cancelled tasks contribute zero hours. Approved absences are informational.</p>
           </>}
       </div>
       <aside className={`${card} space-y-4 p-4`} aria-label="Work type filters">
@@ -220,7 +230,7 @@ function RateForm({ companyId, staffId, start, end, rate }: { companyId: string;
     save.mutate(Number(new FormData(event.currentTarget).get("rate")));
   }
   return <form onSubmit={submit} className="space-y-1">
-    <label className="block text-xs">Hourly rate (GBP)
+    <label className="block text-xs">Employee rate override (GBP)
       <input className={`${field} mt-1 block w-24`} name="rate" type="number" required min="0" max="99999999.99" step="0.01" defaultValue={rate ?? ""} />
     </label>
     <Button type="submit" size="sm" variant="outline" disabled={save.isPending}>Save rate</Button>

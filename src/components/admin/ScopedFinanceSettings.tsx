@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
+import { RecurringInvoiceCustomers } from "./RecurringInvoiceCustomers";
 import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/integrations/supabase/types";
 import { getSettingsBankHolidays, slackWebhookPattern, testSettingsSlack } from "@/lib/settings-external.functions";
@@ -27,7 +28,7 @@ const dayMs = 86_400_000;
 const londonToday = () => dateKey.format(new Date());
 
 function nextInvoiceDate(rule: Invoice, today: string) {
-  const current = new Date(today + "T00:00:00Z");
+  const current = new Date((today < rule.cycle_anchor ? rule.cycle_anchor : today) + "T00:00:00Z");
   if (rule.custom_cycle && rule.custom_cycle > 0) {
     const anchor = Date.parse(rule.cycle_anchor + "T00:00:00Z");
     const cycles = Math.max(1, Math.ceil((current.getTime() - anchor) / (rule.custom_cycle * dayMs)));
@@ -88,7 +89,7 @@ function InvoiceEditor({ initial, close }: { initial: Invoice; close: () => void
   function update<K extends keyof Invoice>(key: K, value: Invoice[K]) {
     setDraft(current => ({ ...current, [key]: value }));
   }
-  return <form className="space-y-4" onSubmit={event => { event.preventDefault(); save.mutate(); }}>
+  return <><form className="space-y-4" onSubmit={event => { event.preventDefault(); save.mutate(); }}>
     <fieldset disabled={save.isPending} className="grid gap-4 sm:grid-cols-2">
       <Field label="Default interval"><select className={selectClass} value={draft.default_interval} onChange={e => update("default_interval", e.target.value)}>
         <option value="weekly">Weekly</option><option value="biweekly">Bi-weekly</option><option value="monthly">Monthly</option>
@@ -105,13 +106,13 @@ function InvoiceEditor({ initial, close }: { initial: Invoice; close: () => void
       <Field label="Cycle start"><Input type="date" required value={draft.cycle_anchor} onChange={e => update("cycle_anchor", e.target.value)} /></Field>
     </fieldset>
     <Toggle label="Auto-generate invoice" value={draft.auto_generate} change={value => update("auto_generate", value)} />
-    <p className="text-xs text-muted-foreground">A custom cycle overrides the invoice day. Cycle start anchors custom and bi-weekly intervals. Automatic generation requires a billing scheduler.</p>
+    <p className="text-xs text-muted-foreground">A custom cycle overrides the invoice day. Cycle start anchors custom and bi-weekly intervals. When enabled, the scheduler creates draft invoices for customers with saved recurring charges.</p>
     <div className="rounded-xl border border-border bg-surface-2 p-4" aria-live="polite">
       <p className="font-semibold">Next invoice: {draft.cycle_anchor ? dateLabel.format(nextInvoiceDate(draft, londonToday())) : "Select cycle start"} + {amount.isError ? "Estimate unavailable" : amount.data === undefined ? "Calculating…" : gbp.format(Number(amount.data))}</p>
-      <p className="mt-1 text-xs text-muted-foreground">Estimate based on the total of current draft invoices.</p>
+      <p className="mt-1 text-xs text-muted-foreground">Estimate based on saved charges for active recurring customers.</p>
     </div>
     <SaveFooter pending={save.isPending} error={save.error} />
-  </form>;
+  </form><RecurringInvoiceCustomers companyId={initial.company_id} /></>;
 }
 
 const rateFields = [
@@ -132,7 +133,11 @@ function WageEditor({ initial, close }: { initial: Wage; close: () => void }) {
       const result = await supabase.from("company_wage_preferences").upsert(draft);
       if (result.error) throw new Error(result.error.message);
     },
-    onSuccess: () => { client.setQueryData(["scoped-settings", "wage-rates", initial.company_id], { section: "wage-rates", row: draft }); close(); },
+    onSuccess: () => {
+      client.setQueryData(["scoped-settings", "wage-rates", initial.company_id], { section: "wage-rates", row: draft });
+      void client.invalidateQueries({ queryKey: ["finance", initial.company_id] });
+      close();
+    },
   });
   const calendar = useQuery({
     queryKey: ["uk-bank-holidays", draft.holiday_region],
@@ -163,7 +168,7 @@ function WageEditor({ initial, close }: { initial: Wage; close: () => void }) {
         <li>4 weekend hours × {gbp.format(base)} × {draft.weekend_multiplier} = {gbp.format(4 * base * draft.weekend_multiplier)}</li>
         <li>50h week with no other premiums: 40h at base, 8h at {draft.overtime_40_multiplier}× and 2h at {draft.overtime_48_multiplier}× = {gbp.format(base * (40 + 8 * draft.overtime_40_multiplier + 2 * draft.overtime_48_multiplier))}</li>
       </ol>}
-      <p className="mt-2 text-xs text-muted-foreground">Examples reflect this draft. Saved rules are available for payroll integration.</p>
+      <p className="mt-2 text-xs text-muted-foreground">The wage listing uses the highest applicable multiplier without stacking premiums.</p>
     </div>
     <SaveFooter pending={save.isPending} error={save.error} />
   </form>;
@@ -188,7 +193,7 @@ function IntegrationEditor({ initial, close }: { initial: Integrations; close: (
       close();
     },
   });
-  function toggle(key: "xero_sync_invoices" | "stripe_payment_links" | "slack_invoice_events" | "slack_checkin_events" | "slack_cancellation_events", value: boolean) {
+  function toggle(key: "xero_sync_invoices" | "stripe_payment_links" | "slack_incident_events" | "slack_invoice_events" | "slack_checkin_events" | "slack_cancellation_events", value: boolean) {
     setDraft(current => ({ ...current, [key]: value }));
   }
   const card = "space-y-3 rounded-xl border border-border bg-card p-4";
@@ -215,11 +220,12 @@ function IntegrationEditor({ initial, close }: { initial: Integrations; close: (
       </Button>
       {test.isSuccess && <p role="status" className="text-sm text-success-strong">Test notification delivered.</p>}
       {test.error && <p role="alert" className="text-sm text-destructive">{test.error.message}</p>}
+      <Toggle label="New incidents" value={draft.slack_incident_events} change={value => toggle("slack_incident_events", value)} />
       <Toggle label="Invoice events" value={draft.slack_invoice_events} change={value => toggle("slack_invoice_events", value)} />
       <Toggle label="Check-in events" value={draft.slack_checkin_events} change={value => toggle("slack_checkin_events", value)} />
       <Toggle label="Cancellation events" value={draft.slack_cancellation_events} change={value => toggle("slack_cancellation_events", value)} />
     </section>
-    <p className="text-xs text-muted-foreground">Preferences are saved independently of provider connections and event delivery.</p>
+    <p className="text-xs text-muted-foreground">Slack delivers enabled events after the webhook is saved. Xero and Stripe require provider setup.</p>
     <SaveFooter pending={save.isPending} error={save.error} />
   </form>;
 }
@@ -241,7 +247,7 @@ export function ScopedFinanceSettings({ section, companyId, close }: { section: 
       }
       const { data, error } = await supabase.from("company_integration_preferences").select("*").eq("company_id", companyId).maybeSingle();
       if (error) throw new Error(error.message);
-      return { section, row: data ?? { company_id: companyId, xero_sync_invoices: false, stripe_payment_links: false, slack_webhook_url: null, slack_invoice_events: false, slack_checkin_events: false, slack_cancellation_events: false } } as const;
+      return { section, row: data ?? { company_id: companyId, xero_sync_invoices: false, stripe_payment_links: false, slack_webhook_url: null, slack_incident_events: false, slack_invoice_events: false, slack_checkin_events: false, slack_cancellation_events: false } } as const;
     },
   });
   return <Dialog open onOpenChange={value => { if (!value) close(); }}>
