@@ -14,6 +14,12 @@ export type Database = {
   }
   public: {
     Tables: {
+      notifications: {
+        Row: { id: string; company_id: string; user_id: string; title: string; message: string; is_read: boolean; created_at: string; created_by: string | null; source_type: string; source_id: string }
+        Insert: { id?: string; company_id: string; user_id: string; title: string; message: string; is_read?: boolean; created_at?: string; created_by?: string | null; source_type: string; source_id: string }
+        Update: { is_read?: boolean }
+        Relationships: []
+      }
       reports: {
         Row: { id: string; company_id: string; title: string; description: string; created_by: string; created_at: string }
         Insert: { id?: string; company_id: string; title: string; description: string; created_by?: string; created_at?: string }

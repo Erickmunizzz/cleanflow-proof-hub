@@ -1,25 +1,13 @@
 import { useState } from "react";
-import { Link } from "@tanstack/react-router";
-import { ChevronDown, CircleHelp, LogOut, Menu, Search, Settings } from "lucide-react";
+import { CircleHelp, LogOut, Menu, Search } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { cn } from "@/lib/utils";
+import { NotificationBell } from "./NotificationBell";
 import { useAdminAccount } from "./AdminSession";
 import { Button } from "@/components/ui/button";
 
-const configItems = [
-  "General settings",
-  "Welcome messages",
-  "Cleaning types",
-  "Absence types",
-  "Notification types",
-  "Resource categories",
-];
-
 export function AdminTopbar({ onToggleMenu }: { onToggleMenu: () => void }) {
   const [query, setQuery] = useState("");
-  const [configOpen, setConfigOpen] = useState(false);
-  const [profileOpen, setProfileOpen] = useState(false);
   const account = useAdminAccount();
 
   const signOut = async () => {
@@ -28,7 +16,6 @@ export function AdminTopbar({ onToggleMenu }: { onToggleMenu: () => void }) {
       toast.error(error.message);
       return;
     }
-    setProfileOpen(false);
     toast.success("Signed out");
   };
 
@@ -65,75 +52,12 @@ export function AdminTopbar({ onToggleMenu }: { onToggleMenu: () => void }) {
           <CircleHelp className="h-5 w-5" />
         </a>
 
-        <div className="relative">
-          <Button variant="ghost" size="icon"
-            onClick={() => { setConfigOpen(!configOpen); setProfileOpen(false); }}
-            aria-label="System configuration"
-            className={cn(
-              "grid h-9 w-9 place-items-center rounded-xl transition",
-              configOpen ? "bg-ink text-ink-foreground" : "text-muted-foreground hover:bg-secondary",
-            )}
-          >
-            <Settings className="h-5 w-5" />
-          </Button>
-          {configOpen && (
-            <div className="absolute right-0 z-50 mt-2 w-[280px] rounded-2xl border border-border bg-popover p-2 shadow-xl">
-              <div className="px-3 py-2 text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
-                System Configuration
-              </div>
-              {configItems.map((c) => (
-                <Link
-                  key={c}
-                  to="/admin/$section"
-                  params={{ section: "settings" }}
-                  onClick={() => setConfigOpen(false)}
-                  className="block w-full rounded-xl px-3 py-2.5 text-left text-[13px] hover:bg-accent"
-                >
-                  {c}
-                </Link>
-              ))}
-            </div>
-          )}
+        <NotificationBell />
+        <div className="flex items-center gap-2">
+          <div className="grid h-8 w-8 place-items-center rounded-full bg-primary text-[12px] font-bold text-primary-foreground">{initials}</div>
+          <span className="hidden max-w-32 truncate text-[13px] font-medium sm:block">{account?.name || "Signed out"}</span>
         </div>
-
-        <div className="mx-1 h-6 w-px bg-border" />
-
-        <div className="relative">
-          <Button variant="ghost" aria-label="Account menu"
-            onClick={() => { setProfileOpen(!profileOpen); setConfigOpen(false); }}
-            className={cn(
-              "flex items-center gap-2 rounded-full py-1 pl-1 pr-3 transition",
-              profileOpen ? "bg-ink text-ink-foreground" : "hover:bg-secondary",
-            )}
-          >
-            <div className="grid h-8 w-8 place-items-center rounded-full bg-primary text-[12px] font-bold text-primary-foreground">{initials}</div>
-            <span className="hidden max-w-32 truncate text-[13px] font-medium sm:block">{account?.name || "Signed out"}</span>
-            <ChevronDown className={cn("hidden h-4 w-4 transition sm:block", profileOpen && "rotate-180")} />
-          </Button>
-          {profileOpen && (
-            <div className="absolute right-0 z-50 mt-2 w-[220px] rounded-2xl border border-border bg-popover p-2 text-popover-foreground shadow-xl">
-              <div className="px-3 py-2">
-                <div className="truncate text-[13px] font-semibold">{account?.name || "Owner"}</div>
-                <div className="truncate text-[11px] text-muted-foreground">{account?.email || "Signed out"}</div>
-              </div>
-              <div className="my-1 h-px bg-border" />
-              <Link
-                to="/admin/$section"
-                params={{ section: "settings" }}
-                onClick={() => setProfileOpen(false)}
-                className="flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-left text-[13px] hover:bg-accent"
-              >
-                <Settings className="h-4 w-4" /> Settings
-              </Link>
-              <button
-                onClick={() => void signOut()}
-                className="flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-left text-[13px] text-destructive hover:bg-accent"
-              >
-                <LogOut className="h-4 w-4" /> Sign out
-              </button>
-            </div>
-          )}
-        </div>
+        {account && <Button variant="ghost" size="icon" aria-label="Sign out" title="Sign out" onClick={() => void signOut()}><LogOut className="h-4 w-4" /></Button>}
       </div>
     </header>
   );
