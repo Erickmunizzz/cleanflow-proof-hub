@@ -28,8 +28,7 @@ export type AdminNavItem = {
 
 export type AdminNavGroup = { group: string; items: AdminNavItem[] };
 
-// Mirrors the prototype sidebar. Finance modules (Wages, Invoicing, Payments)
-// are intentionally hidden: out of scope for this product stage.
+// Shared navigation for the admin workspace.
 export const adminNav: AdminNavGroup[] = [
   {
     group: "Operations",
@@ -49,6 +48,10 @@ export const adminNav: AdminNavGroup[] = [
       { id: "client-portal", label: "Client Portal", icon: Globe, badge: "GROWTH" },
       { id: "safety", label: "Safety & Compliance", icon: ShieldCheck },
     ],
+  },
+  {
+    group: "Finance",
+    items: [{ id: "invoices", label: "Invoicing", icon: FileText }, { id: "wages", label: "Wages & Hours", icon: Clock3 }],
   },
   {
     group: "Quality",

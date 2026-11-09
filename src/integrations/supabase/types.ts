@@ -14,6 +14,18 @@ export type Database = {
   }
   public: {
     Tables: {
+      invoices: {
+        Row: { id: string; company_id: string; customer_id: string; invoice_number: string; amount: number; status: string; due_date: string; created_at: string }
+        Insert: { id?: string; company_id: string; customer_id: string; invoice_number: string; amount: number; status?: string; due_date: string; created_at?: string }
+        Update: { customer_id?: string; invoice_number?: string; amount?: number; status?: string; due_date?: string }
+        Relationships: []
+      }
+      staff_wages: {
+        Row: { id: string; company_id: string; staff_id: string; total_hours: number; hourly_rate: number; total_amount: number; period_start: string; period_end: string; created_at: string }
+        Insert: { id?: string; company_id: string; staff_id: string; hourly_rate: number; period_start: string; period_end: string }
+        Update: { hourly_rate?: number }
+        Relationships: []
+      }
       notifications: {
         Row: { id: string; company_id: string; user_id: string; title: string; message: string; is_read: boolean; created_at: string; created_by: string | null; source_type: string; source_id: string }
         Insert: { id?: string; company_id: string; user_id: string; title: string; message: string; is_read?: boolean; created_at?: string; created_by?: string | null; source_type: string; source_id: string }
@@ -854,7 +866,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      get_wage_hours: { Args: { target_company: string; start_date: string; end_date: string }; Returns: { staff_id: string; staff_name: string; total_hours: number }[] }
     }
     Enums: {
       [_ in never]: never
