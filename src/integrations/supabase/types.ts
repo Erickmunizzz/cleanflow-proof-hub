@@ -73,6 +73,58 @@ export type Database = {
         }
         Relationships: []
       }
+      incidents: {
+        Row: {
+          company_id: string
+          created_at: string
+          description: string
+          id: string
+          job_id: string
+          reported_by: string
+          type: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          description: string
+          id?: string
+          job_id: string
+          reported_by: string
+          type: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          description?: string
+          id?: string
+          job_id?: string
+          reported_by?: string
+          type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "incidents_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "incidents_job_same_company_fkey"
+            columns: ["company_id", "job_id"]
+            isOneToOne: false
+            referencedRelation: "jobs"
+            referencedColumns: ["company_id", "id"]
+          },
+          {
+            foreignKeyName: "incidents_reporter_same_company_fkey"
+            columns: ["company_id", "reported_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["company_id", "id"]
+          },
+        ]
+      }
       jobs: {
         Row: {
           check_in_at: string | null
@@ -162,6 +214,67 @@ export type Database = {
           },
           {
             foreignKeyName: "jobs_staff_same_company_fkey"
+            columns: ["company_id", "staff_id"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["company_id", "id"]
+          },
+        ]
+      }
+      key_registers: {
+        Row: {
+          company_id: string
+          created_at: string
+          customer_id: string
+          id: string
+          key_code: string
+          notes: string | null
+          picked_up_at: string | null
+          returned_at: string | null
+          staff_id: string | null
+          status: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          customer_id: string
+          id?: string
+          key_code: string
+          notes?: string | null
+          picked_up_at?: string | null
+          returned_at?: string | null
+          staff_id?: string | null
+          status?: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          customer_id?: string
+          id?: string
+          key_code?: string
+          notes?: string | null
+          picked_up_at?: string | null
+          returned_at?: string | null
+          staff_id?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "key_registers_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "key_registers_customer_same_company_fkey"
+            columns: ["company_id", "customer_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["company_id", "id"]
+          },
+          {
+            foreignKeyName: "key_registers_staff_same_company_fkey"
             columns: ["company_id", "staff_id"]
             isOneToOne: false
             referencedRelation: "staff"
