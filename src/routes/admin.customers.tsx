@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { RecordsPage } from "@/components/admin/RecordsPage";
+import { CustomersPage } from "@/components/admin/CustomersPage";
 import { AdminRecordsError } from "@/components/admin/AdminRecordsError";
 export const Route = createFileRoute("/admin/customers")({
   validateSearch: (search: Record<string, unknown>) => ({ q: typeof search['q'] === "string" ? search['q'] : "" }),
@@ -16,5 +16,5 @@ export const Route = createFileRoute("/admin/customers")({
 function Page() {
   const { q } = Route.useSearch();
   const navigate = Route.useNavigate();
-  return <RecordsPage kind="customers" search={q} onSearch={q => { void navigate({ search: { q }, replace: true }); } } />;
+  return <CustomersPage search={q} onSearch={q => { void navigate({ search: { q }, replace: true }); } } />;
 }
