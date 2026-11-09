@@ -111,11 +111,16 @@ export function IncidentsPage() {
     if (!window.confirm(`Delete this ${incident.type} incident?`)) return;
     setActionError("");
     setDeletingId(incident.id);
-    const { error } = await supabase.from("incidents").delete()
-      .eq("id", incident.id).eq("company_id", owner.companyId);
-    setDeletingId(null);
-    if (error) { setActionError(error.message); return; }
-    await queryClient.invalidateQueries({ queryKey: ["incidents", owner.companyId] });
+    try {
+      const { error } = await supabase.from("incidents").delete()
+        .eq("id", incident.id).eq("company_id", owner.companyId);
+      if (error) throw new Error(error.message);
+      await queryClient.invalidateQueries({ queryKey: ["incidents", owner.companyId] });
+    } catch (error) {
+      setActionError(error instanceof Error ? error.message : "The incident could not be deleted.");
+    } finally {
+      setDeletingId(null);
+    }
   }
 
   const jobs = adminData.jobs;
