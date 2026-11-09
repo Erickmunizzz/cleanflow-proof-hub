@@ -153,23 +153,26 @@ export function SettingsPage() {
       welcome_email_template: editing.welcome.emailBody,
       settings_data: editing as unknown as Json,
     };
-    const { data, error } = await supabase.from("company_settings")
-      .upsert(payload, { onConflict: "company_id" }).select("*").single();
-    setSaving(false);
-    if (error) {
-      setSaveError(error.message);
+    try {
+      const { data, error } = await supabase.from("company_settings")
+        .upsert(payload, { onConflict: "company_id" }).select("*").single();
+      if (error) throw new Error(error.message);
+      setDraft(draftFromSettings(data));
+      queryClient.setQueryData(["company-settings", companyId], data);
+      setActive(null);
+      toast.success("Settings saved to Supabase.");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Unknown save error.";
+      setSaveError(message);
       toast.error("Settings could not be saved.");
-      return;
+    } finally {
+      setSaving(false);
     }
-    setDraft(draftFromSettings(data));
-    queryClient.setQueryData(["company-settings", companyId], data);
-    setActive(null);
-    toast.success("Settings saved to Supabase.");
   }
   return <div className="max-w-[1200px] space-y-6">
     <div className="flex flex-wrap items-start justify-between gap-3">
       <h1 className="text-[26px] font-bold">System Settings</h1>
-      <span role="status" className="rounded-full border border-border bg-card px-3 py-1 text-[11px] font-medium text-muted-foreground">{settingsQuery.data ? `Saved · ${formatSavedAt(settingsQuery.data)}` : "Settings not saved yet"}</span>
+      <span role="status" className="rounded-full border border-border bg-card px-3 py-1 text-[11px] font-medium text-muted-foreground">{settingsQuery.data ? `Saved · ${formatSavedAt(settingsQuery.data)}` : settingsQuery.isError ? "Settings unavailable" : "Loading settings…"}</span>
     </div>
     {companyQuery.isFetching && <p role="status" className="flex items-center gap-2 text-sm text-muted-foreground"><Loader2 className="size-4 animate-spin" />Loading company details…</p>}
     {companyQuery.isError && <div role="alert" className="flex flex-wrap items-center gap-3 text-sm text-danger"><span>{companyQuery.error.message}</span><Button variant="outline" size="sm" onClick={() => void companyQuery.refetch()}>Try again</Button></div>}
