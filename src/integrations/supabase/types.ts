@@ -14,31 +14,100 @@ export type Database = {
   }
   public: {
     Tables: {
+      client_locations: {
+        Row: {
+          address: string | null
+          city: string | null
+          company_id: string
+          created_at: string
+          customer_id: string
+          id: string
+          is_main: boolean
+          label: string
+          location_no: string | null
+          postcode: string | null
+        }
+        Insert: {
+          address?: string | null
+          city?: string | null
+          company_id: string
+          created_at?: string
+          customer_id: string
+          id?: string
+          is_main?: boolean
+          label: string
+          location_no?: string | null
+          postcode?: string | null
+        }
+        Update: {
+          address?: string | null
+          city?: string | null
+          company_id?: string
+          created_at?: string
+          customer_id?: string
+          id?: string
+          is_main?: boolean
+          label?: string
+          location_no?: string | null
+          postcode?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_locations_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_locations_customer_same_company_fkey"
+            columns: ["company_id", "customer_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["company_id", "id"]
+          },
+        ]
+      }
       clients: {
         Row: {
           address: string | null
+          city: string | null
           company_id: string | null
+          contact_language: string | null
+          contact_person: string | null
           created_at: string
+          customer_no: string | null
           email: string | null
           id: string
+          is_archived: boolean
           name: string
           phone: string | null
         }
         Insert: {
           address?: string | null
+          city?: string | null
           company_id?: string | null
+          contact_language?: string | null
+          contact_person?: string | null
           created_at?: string
+          customer_no?: string | null
           email?: string | null
           id?: string
+          is_archived?: boolean
           name: string
           phone?: string | null
         }
         Update: {
           address?: string | null
+          city?: string | null
           company_id?: string | null
+          contact_language?: string | null
+          contact_person?: string | null
           created_at?: string
+          customer_no?: string | null
           email?: string | null
           id?: string
+          is_archived?: boolean
           name?: string
           phone?: string | null
         }
@@ -178,8 +247,10 @@ export type Database = {
           client_id: string | null
           company_id: string | null
           created_at: string
+          duration_minutes: number | null
           id: string
           notes: string | null
+          priority: string
           scheduled_date: string
           staff_id: string | null
           status: string
@@ -197,8 +268,10 @@ export type Database = {
           client_id?: string | null
           company_id?: string | null
           created_at?: string
+          duration_minutes?: number | null
           id?: string
           notes?: string | null
+          priority?: string
           scheduled_date?: string
           staff_id?: string | null
           status?: string
@@ -216,8 +289,10 @@ export type Database = {
           client_id?: string | null
           company_id?: string | null
           created_at?: string
+          duration_minutes?: number | null
           id?: string
           notes?: string | null
+          priority?: string
           scheduled_date?: string
           staff_id?: string | null
           status?: string
@@ -325,27 +400,42 @@ export type Database = {
       }
       materials: {
         Row: {
+          category: string | null
           company_id: string | null
           created_at: string
           id: string
+          is_archived: boolean
+          minimum_quantity: number
           name: string
+          product_no: string | null
           quantity: number
+          storage_location: string | null
           unit: string | null
         }
         Insert: {
+          category?: string | null
           company_id?: string | null
           created_at?: string
           id?: string
+          is_archived?: boolean
+          minimum_quantity?: number
           name: string
+          product_no?: string | null
           quantity?: number
+          storage_location?: string | null
           unit?: string | null
         }
         Update: {
+          category?: string | null
           company_id?: string | null
           created_at?: string
           id?: string
+          is_archived?: boolean
+          minimum_quantity?: number
           name?: string
+          product_no?: string | null
           quantity?: number
+          storage_location?: string | null
           unit?: string | null
         }
         Relationships: [
