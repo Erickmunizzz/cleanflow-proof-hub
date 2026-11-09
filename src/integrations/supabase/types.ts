@@ -14,6 +14,12 @@ export type Database = {
   }
   public: {
     Tables: {
+      reports: {
+        Row: { id: string; company_id: string; title: string; description: string; created_by: string; created_at: string }
+        Insert: { id?: string; company_id: string; title: string; description: string; created_by?: string; created_at?: string }
+        Update: { id?: string; company_id?: string; title?: string; description?: string; created_by?: string; created_at?: string }
+        Relationships: []
+      }
       client_locations: {
         Row: {
           address: string | null
