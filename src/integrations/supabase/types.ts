@@ -761,6 +761,48 @@ export type Database = {
           },
         ]
       }
+      reports: {
+        Row: {
+          company_id: string
+          created_at: string
+          created_by: string
+          description: string
+          id: string
+          title: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          created_by?: string
+          description: string
+          id?: string
+          title: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          created_by?: string
+          description?: string
+          id?: string
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reports_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reports_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       staff: {
         Row: {
           company_id: string | null
