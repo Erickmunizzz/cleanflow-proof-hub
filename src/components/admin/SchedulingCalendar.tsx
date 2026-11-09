@@ -1,143 +1,71 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { useQuery, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
-import { CalendarDays, ChevronLeft, ChevronRight, Clock3 } from "lucide-react";
+import { ArrowLeft, ArrowRight, Plus } from "lucide-react";
 import { adminRecordsOptions } from "@/lib/admin-records.query";
 import { ownerContextOptions } from "@/lib/owner-context";
 import { supabase } from "@/integrations/supabase/client";
-import { cn } from "@/lib/utils";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
 
-const weekdays = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
-const card = "rounded-2xl border border-border bg-card shadow-[var(--shadow-card)]";
-
-function dayKey(date: Date) {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
+type View = "Day" | "Week" | "Month" | "List";
+const key = (d: Date) => new Intl.DateTimeFormat("en-CA", {timeZone:"Europe/London",year:"numeric",month:"2-digit",day:"2-digit"}).format(d);
+const day = (s:string) => new Date(s+"T12:00:00Z");
+const shift = (d:Date,n:number) => new Date(Date.UTC(d.getUTCFullYear(),d.getUTCMonth(),d.getUTCDate()+n,12));
+const initials=(s:string)=>s.split(" ").map(w=>w[0]??"").slice(0,2).join("").toUpperCase();
+const field="h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm";
+function londonInstant(date:string,time:string) {
+  const target=Date.parse(date+"T"+time+":00Z");
+  let candidate=target;
+  for(let i=0;i<3;i++){
+    const parts=new Intl.DateTimeFormat("en-GB",{timeZone:"Europe/London",year:"numeric",month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit",hourCycle:"h23"}).formatToParts(new Date(candidate));
+    const p=(name:string)=>parts.find(x=>x.type===name)?.value??"";
+    const rendered=Date.parse(p("year")+"-"+p("month")+"-"+p("day")+"T"+p("hour")+":"+p("minute")+":00Z");
+    if(rendered===target)return new Date(candidate).toISOString();
+    candidate+=target-rendered;
+  }
+  throw new Error("This time does not exist in Europe/London. Choose another time.");
 }
-
-export function SchedulingCalendar() {
-  const { data } = useSuspenseQuery(adminRecordsOptions);
-  const owner = useQuery(ownerContextOptions);
-  const queryClient = useQueryClient();
-  const jobs = data.jobs;
-  const [month, setMonth] = useState(() => {
-    const today = new Date();
-    return new Date(today.getFullYear(), today.getMonth(), 1);
-  });
-  const [selectedDay, setSelectedDay] = useState(() => dayKey(new Date()));
-
-  useEffect(() => {
-    const companyId = owner.data?.companyId;
-    if (!companyId) return;
-    const channel = supabase
-      .channel(`owner-scheduling-${companyId}-${Math.random().toString(36).slice(2)}`)
-      .on("postgres_changes", {
-        event: "*", schema: "public", table: "jobs", filter: `company_id=eq.${companyId}`,
-      }, () => {
-        void queryClient.invalidateQueries({ queryKey: ["admin-records"] });
-      })
-      .subscribe();
-    return () => { void supabase.removeChannel(channel); };
-  }, [owner.data?.companyId, queryClient]);
-
-  const jobsByDay = useMemo(() => {
-    const grouped = new Map<string, typeof jobs>();
-    for (const job of jobs) {
-      const scheduled = new Date(job.scheduled_date);
-      if (Number.isNaN(scheduled.getTime())) continue;
-      const key = dayKey(scheduled);
-      const matches = grouped.get(key) ?? [];
-      grouped.set(key, [...matches, job]);
-    }
-    for (const [key, dayJobs] of grouped) {
-      grouped.set(key, [...dayJobs].sort((a, b) => new Date(a.scheduled_date).getTime() - new Date(b.scheduled_date).getTime()));
-    }
-    return grouped;
-  }, [jobs]);
-
-  const firstOfMonth = new Date(month.getFullYear(), month.getMonth(), 1);
-  const gridStart = new Date(month.getFullYear(), month.getMonth(), 1 - ((firstOfMonth.getDay() + 6) % 7));
-  const calendarDays = Array.from({ length: 42 }, (_, index) => new Date(gridStart.getFullYear(), gridStart.getMonth(), gridStart.getDate() + index));
-  const selectedJobs = jobsByDay.get(selectedDay) ?? [];
-  const moveMonth = (amount: number) => {
-    const nextMonth = new Date(month.getFullYear(), month.getMonth() + amount, 1);
-    setMonth(nextMonth);
-    setSelectedDay(dayKey(nextMonth));
-  };
-
-  return <div className="space-y-6">
-    <div className="flex flex-wrap items-start justify-between gap-4">
-      <div>
-        <h1 className="text-[28px] font-bold leading-none tracking-tight">Scheduling</h1>
-        <p className="mt-2 text-[13.5px] text-muted-foreground">Scheduled jobs from your workspace</p>
-      </div>
-      <div className="flex items-center gap-2">
-        <button type="button" aria-label="Previous month" onClick={() => moveMonth(-1)} className="grid size-9 place-items-center rounded-xl border border-border bg-card hover:bg-accent"><ChevronLeft className="size-4" /></button>
-        <div className="min-w-36 text-center text-sm font-semibold">{month.toLocaleDateString("en-GB", { month: "long", year: "numeric" })}</div>
-        <button type="button" aria-label="Next month" onClick={() => moveMonth(1)} className="grid size-9 place-items-center rounded-xl border border-border bg-card hover:bg-accent"><ChevronRight className="size-4" /></button>
-      </div>
-    </div>
-
-    <section aria-label="Job calendar" className={cn(card, "overflow-hidden p-3 sm:p-5")}>
-      <div className="grid grid-cols-7 gap-1 sm:gap-2">
-        {weekdays.map(day => <div key={day} className="px-1 py-2 text-center text-[11px] font-semibold uppercase tracking-wide text-muted-foreground sm:text-xs">{day}</div>)}
-        {calendarDays.map(date => {
-          const key = dayKey(date);
-          const dayJobs = jobsByDay.get(key) ?? [];
-          const inMonth = date.getMonth() === month.getMonth();
-          const selected = key === selectedDay;
-          return <button
-            key={key}
-            type="button"
-            aria-pressed={selected}
-            aria-label={`${date.toLocaleDateString("en-GB", { dateStyle: "full" })}, ${dayJobs.length} scheduled jobs`}
-            onClick={() => setSelectedDay(key)}
-            className={cn(
-              "min-h-[76px] rounded-xl border p-1.5 text-left transition sm:min-h-24 sm:p-2",
-              inMonth ? "border-border bg-card" : "border-transparent bg-surface-2 text-muted-foreground",
-              selected && "border-primary ring-2 ring-primary/20",
-            )}
-          >
-            <span className={cn("grid size-6 place-items-center rounded-full text-xs font-semibold", selected && "bg-primary text-primary-foreground")}>{date.getDate()}</span>
-            <span className="mt-1 block space-y-1">
-              {dayJobs.slice(0, 2).map(job => <span key={job.id} className={cn(
-                "block truncate rounded-md px-1 py-0.5 text-[9px] font-medium sm:text-[10px]",
-                job.status.toLowerCase().replaceAll("-", "_") === "completed" ? "bg-success-soft text-success-strong"
-                  : job.status.toLowerCase().replaceAll("-", "_") === "in_progress" ? "bg-warning-soft text-warning-strong"
-                    : "bg-primary-soft text-primary",
-              )}>{job.title}</span>)}
-              {dayJobs.length > 2 && <span className="block px-1 text-[9px] text-muted-foreground">+{dayJobs.length - 2} more</span>}
-            </span>
-          </button>;
-        })}
-      </div>
-    </section>
-
-    <section className={cn(card, "p-4 sm:p-5")}>
-      <div className="mb-4 flex items-center gap-2">
-        <CalendarDays className="size-4 text-primary" />
-        <h2 className="text-sm font-semibold">{new Date(`${selectedDay}T12:00:00`).toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}</h2>
-        <span className="ml-auto rounded-full bg-primary-soft px-2.5 py-1 text-xs font-semibold text-primary">{selectedJobs.length} {selectedJobs.length === 1 ? "job" : "jobs"}</span>
-      </div>
-      {selectedJobs.length ? <div className="space-y-3">{selectedJobs.map(job => {
-        const status = job.status.toLowerCase().replaceAll("-", "_");
-        const scheduledTime = new Date(job.scheduled_date).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
-        return <article key={job.id} className="flex flex-wrap items-center gap-3 rounded-xl border border-border bg-surface-2 p-3">
-          <span className="grid size-10 shrink-0 place-items-center rounded-lg bg-primary-soft text-primary"><Clock3 className="size-4" /></span>
-          <div className="min-w-0 flex-1">
-            <h3 className="truncate text-sm font-semibold">{job.title}</h3>
-            <p className="mt-0.5 truncate text-xs text-muted-foreground">{job.clients?.name ?? "No customer"} · {job.staff?.name ?? "Unassigned cleaner"}</p>
-          </div>
-          <span className="text-sm font-medium">{scheduledTime}</span>
-          <span className={cn(
-            "rounded-full px-2.5 py-1 text-[11px] font-semibold capitalize",
-            status === "completed" ? "bg-success-soft text-success-strong"
-              : status === "in_progress" ? "bg-warning-soft text-warning-strong"
-                : "bg-primary-soft text-primary",
-          )}>{status.replaceAll("_", " ")}</span>
-        </article>;
-      })}</div> : <p className="py-8 text-center text-sm text-muted-foreground">No jobs scheduled for this day.</p>}
-    </section>
-  </div>;
+export function SchedulingCalendar(){
+ const {data}=useSuspenseQuery(adminRecordsOptions);
+ const owner=useQuery(ownerContextOptions),qc=useQueryClient(),companyId=owner.data?.companyId;
+ const [view,setView]=useState<View>("Week"),[anchor,setAnchor]=useState(()=>key(new Date())),[area,setArea]=useState(""),[employee,setEmployee]=useState("");
+ const [open,setOpen]=useState(false),[editing,setEditing]=useState<string|null>(null),[busy,setBusy]=useState(false),[error,setError]=useState("");
+ const [form,setForm]=useState({title:"",date:anchor,time:"09:00",client_id:"",staff_id:"",duration:"",priority:"medium",notes:""});
+ type Job=(typeof data.jobs)[number];
+ const refresh=async()=>{await Promise.all(["admin-records","jobs","checkin-jobs","owner-overview"].map(k=>qc.invalidateQueries({queryKey:[k]})))};
+ useEffect(()=>{if(!companyId)return;let ch=supabase.channel("scheduling-"+companyId);
+ for(const table of ["jobs","clients","staff"])ch=ch.on("postgres_changes",{event:"*",schema:"public",table,filter:"company_id=eq."+companyId},()=>void qc.invalidateQueries({queryKey:["admin-records"]}));
+ ch.subscribe();return()=>{void supabase.removeChannel(ch)}},[companyId,qc]);
+ const a=day(anchor),monday=shift(a,-((a.getUTCDay()+6)%7));
+ const monthStart=new Date(Date.UTC(a.getUTCFullYear(),a.getUTCMonth(),1,12));
+ const start=view==="Month"?shift(monthStart,-((monthStart.getUTCDay()+6)%7)):view==="Day"?a:monday;
+ const days=Array.from({length:view==="Month"?42:view==="Day"?1:7},(_,i)=>shift(start,i));
+ const areaFor=(j:Job)=>data.clients.find(c=>c.id===j.client_id)?.city?.trim()??"";
+ const areas=Array.from(new Set(data.clients.map(c=>c.city?.trim()).filter((x):x is string=>!!x))).sort();
+ const filtered=data.jobs.filter(j=>(!employee||j.staff_id===employee)&&(!area||areaFor(j)===area)).sort((x,y)=>x.scheduled_date.localeCompare(y.scheduled_date));
+ const visible=filtered.filter(j=>key(new Date(j.scheduled_date))>=key(start)&&key(new Date(j.scheduled_date))<=key(days[days.length-1]!));
+ const today=key(new Date());
+ const todayStaff=data.staff.filter(s=>data.jobs.some(j=>j.staff_id===s.id&&key(new Date(j.scheduled_date))===today));
+ const weekThursday=shift(monday,3),yearStart=new Date(Date.UTC(weekThursday.getUTCFullYear(),0,1,12));
+ const week=Math.ceil(((weekThursday.getTime()-yearStart.getTime())/86400000+1)/7);
+ const range=view==="Month"?a.toLocaleDateString("en-GB",{month:"long",year:"numeric",timeZone:"UTC"}):view==="Day"?a.toLocaleDateString("en-GB",{weekday:"long",day:"numeric",month:"short",year:"numeric",timeZone:"UTC"}):"Week "+week+" • "+monday.getUTCDate()+"–"+shift(monday,6).toLocaleDateString("en-GB",{day:"numeric",month:"short",year:"numeric",timeZone:"UTC"});
+ function move(n:number){setAnchor(key(view==="Month"?new Date(Date.UTC(a.getUTCFullYear(),a.getUTCMonth()+n,1,12)):shift(a,n*(view==="Day"?1:7))))}
+ function create(date=anchor){setEditing(null);setError("");setForm({title:"",date,time:"09:00",client_id:"",staff_id:employee,duration:"",priority:"medium",notes:""});setOpen(true)}
+ function edit(j:Job){setEditing(j.id);setError("");setForm({title:j.title,date:key(new Date(j.scheduled_date)),time:new Date(j.scheduled_date).toLocaleTimeString("en-GB",{timeZone:"Europe/London",hour:"2-digit",minute:"2-digit",hourCycle:"h23"}),client_id:j.client_id??"",staff_id:j.staff_id??"",duration:j.duration_minutes===null?"":String(j.duration_minutes),priority:j.priority,notes:j.notes??""});setOpen(true)}
+ async function save(e:FormEvent){e.preventDefault();if(!companyId||busy)return;setBusy(true);setError("");try{
+ const payload={title:form.title.trim(),client_id:form.client_id||null,staff_id:form.staff_id||null,scheduled_date:londonInstant(form.date,form.time),duration_minutes:form.duration?Number(form.duration):null,priority:form.priority,notes:form.notes.trim()||null};
+ if(!payload.title)throw new Error("Enter a shift title.");
+ const r=editing?await supabase.from("jobs").update(payload).eq("company_id",companyId).eq("id",editing).select("id").single():await supabase.from("jobs").insert({...payload,company_id:companyId,status:"scheduled"}).select("id").single();
+ if(r.error)throw r.error;await refresh();setOpen(false);toast.success(editing?"Shift updated":"Shift created");
+ }catch(e){setError(e instanceof Error?e.message:String((e as {message?:string}).message??"Couldn't save shift."))}finally{setBusy(false)}}
+ async function remove(){if(!editing||!companyId||busy||!window.confirm("Delete this shift? This cannot be undone."))return;setBusy(true);try{const r=await supabase.from("jobs").delete().eq("company_id",companyId).eq("id",editing).select("id").single();if(r.error)throw r.error;await refresh();setOpen(false);toast.success("Shift deleted")}catch(e){setError((e as {message?:string}).message??"Couldn't delete shift.")}finally{setBusy(false)}}
+ const card=(j:Job)=><button key={j.id} onClick={()=>edit(j)} className="block w-full rounded-2xl border border-slate-200 bg-white p-4 text-left shadow-sm transition hover:border-blue-400 focus-visible:outline-blue-600"><div className="truncate text-sm font-bold">{j.clients?.name??j.title}</div><div className="mt-1 text-sm text-slate-600">{j.title}{j.duration_minutes!==null?" • "+Number((j.duration_minutes/60).toFixed(2))+"h":""}</div><div className="mt-3 flex items-center gap-2"><span className="grid size-7 shrink-0 place-items-center rounded-full bg-slate-950 text-[10px] font-semibold text-white">{initials(j.staff?.name??"?")}</span><span className="truncate text-xs text-slate-600">{j.staff?.name??"Unassigned"}</span></div></button>;
+ return <div className="space-y-6 text-slate-950">
+ <header className="flex flex-wrap items-center justify-between gap-4"><h1 className="text-[32px] font-bold tracking-tight">Scheduling</h1><div className="flex flex-wrap items-center gap-1">{(["Day","Week","Month","List"] as View[]).map(v=><button key={v} aria-pressed={view===v} onClick={()=>setView(v)} className={"rounded-xl px-4 py-2.5 text-sm font-semibold "+(view===v?"bg-slate-950 text-white":"hover:bg-slate-100")}>{v}</button>)}<button disabled={!companyId} onClick={()=>create()} className="ml-3 inline-flex items-center gap-2 rounded-2xl bg-blue-600 px-5 py-3 text-sm font-semibold text-white disabled:opacity-50"><Plus className="size-4"/>New shift</button></div></header>
+ <div className="flex flex-wrap items-center gap-4 rounded-2xl border border-slate-200 bg-white p-4"><div className="flex items-center gap-3"><button aria-label="Previous period" onClick={()=>move(-1)} className="rounded-lg p-2 hover:bg-slate-100"><ArrowLeft className="size-4"/></button><span className="min-w-48 text-center text-sm font-semibold">{range}</span><button aria-label="Next period" onClick={()=>move(1)} className="rounded-lg p-2 hover:bg-slate-100"><ArrowRight className="size-4"/></button></div><select aria-label="Filter by customer area" value={area} onChange={e=>setArea(e.target.value)} className="h-10 rounded-xl border border-slate-200 bg-white px-4 text-sm"><option value="">All areas</option>{areas.map(x=><option key={x}>{x}</option>)}</select><select aria-label="Filter employees" value={employee} onChange={e=>setEmployee(e.target.value)} className="h-10 rounded-xl border border-slate-200 bg-white px-4 text-sm"><option value="">All employees</option>{data.staff.map(s=><option key={s.id} value={s.id}>{s.name}</option>)}</select><span className="ml-auto flex items-center gap-2 text-sm text-slate-600"><span className="size-2 rounded-full bg-green-600"/>{visible.length} shifts scheduled</span></div>
+ <div className="grid items-start gap-5 lg:grid-cols-[250px_minmax(0,1fr)]"><aside className="rounded-3xl border border-slate-200 bg-white p-5"><h2 className="mb-5 font-semibold">Employees today</h2><div className="space-y-5">{todayStaff.map(s=>{const scheduled=data.jobs.filter(j=>j.staff_id===s.id&&key(new Date(j.scheduled_date))===today);const minutes=scheduled.reduce((sum,j)=>sum+(j.duration_minutes??0),0);return <button key={s.id} onClick={()=>setEmployee(employee===s.id?"":s.id)} className="flex w-full items-start gap-3 rounded-xl p-2 text-left hover:bg-slate-50"><span className="grid size-10 shrink-0 place-items-center rounded-full bg-slate-950 text-xs font-semibold text-white">{initials(s.name)}</span><span><span className="block text-sm font-semibold">{s.name}</span><span className="block text-xs text-slate-500">{minutes?Number((minutes/60).toFixed(2))+"h • ":""}{scheduled.some(j=>j.status==="in_progress")?"Working":scheduled.every(j=>j.status==="completed")?"Completed":"Scheduled"}</span><span className="block text-xs text-slate-500">{s.role||"Employee"}</span></span></button>})}{!todayStaff.length&&<p className="text-sm text-slate-500">No employees scheduled today.</p>}</div></aside>
+ <div className="min-w-0 overflow-x-auto rounded-3xl border border-slate-200 bg-white p-3">{view==="List"?<div className="space-y-3 p-2">{visible.map(j=><div key={j.id}><p className="mb-2 text-xs text-slate-500">{new Date(j.scheduled_date).toLocaleString("en-GB",{timeZone:"Europe/London"})}</p>{card(j)}</div>)}{!visible.length&&<p className="p-8 text-center text-sm text-slate-500">No shifts scheduled for this period.</p>}</div>:<div className={view==="Day"?"grid grid-cols-1":"grid min-w-[980px] grid-cols-7"}>{days.map(d=>{const date=key(d);return <section key={date} className={"min-h-[220px] border-r border-slate-100 p-2 last:border-r-0 "+(view==="Month"&&d.getUTCMonth()!==a.getUTCMonth()?"bg-slate-50":"")}><h2 className="mb-5 border-b border-slate-100 pb-4 pt-2 text-center text-xs font-bold uppercase">{d.toLocaleDateString("en-GB",{weekday:"short",timeZone:"UTC"})} {d.getUTCDate()}</h2><div className="space-y-3">{visible.filter(j=>key(new Date(j.scheduled_date))===date).map(card)}</div><button disabled={!companyId} onClick={()=>create(date)} className="mt-4 flex w-full items-center justify-center gap-1 rounded-xl py-3 text-sm font-semibold hover:bg-blue-50"><Plus className="size-4"/>Add</button></section>})}</div>}</div></div>
+ <Dialog open={open} onOpenChange={v=>{if(!busy)setOpen(v)}}><DialogContent className="max-h-[90dvh] overflow-y-auto bg-white"><DialogHeader><DialogTitle>{editing?"Edit shift":"New shift"}</DialogTitle><DialogDescription>Schedule a job in Europe/London time.</DialogDescription></DialogHeader><form onSubmit={e=>void save(e)} className="space-y-4"><label className="block text-sm">Shift title<input required className={field} value={form.title} onChange={e=>setForm({...form,title:e.target.value})}/></label><div className="grid grid-cols-2 gap-3"><label className="text-sm">Date<input required type="date" className={field} value={form.date} onChange={e=>setForm({...form,date:e.target.value})}/></label><label className="text-sm">Start time<input required type="time" className={field} value={form.time} onChange={e=>setForm({...form,time:e.target.value})}/></label></div><label className="block text-sm">Customer<select className={field} value={form.client_id} onChange={e=>setForm({...form,client_id:e.target.value})}><option value="">No customer</option>{data.clients.map(c=><option key={c.id} value={c.id}>{c.name}</option>)}</select></label><label className="block text-sm">Employee<select className={field} value={form.staff_id} onChange={e=>setForm({...form,staff_id:e.target.value})}><option value="">Unassigned</option>{data.staff.map(s=><option key={s.id} value={s.id}>{s.name}</option>)}</select></label><div className="grid grid-cols-2 gap-3"><label className="text-sm">Duration (minutes)<input type="number" min="1" max="1440" step="1" className={field} value={form.duration} onChange={e=>setForm({...form,duration:e.target.value})}/></label><label className="text-sm">Priority<select className={field} value={form.priority} onChange={e=>setForm({...form,priority:e.target.value})}>{["low","medium","high"].map(p=><option key={p} value={p}>{p}</option>)}</select></label></div><label className="block text-sm">Notes<textarea className="min-h-20 w-full rounded-xl border border-slate-200 p-3" value={form.notes} onChange={e=>setForm({...form,notes:e.target.value})}/></label>{error&&<p role="alert" className="text-sm text-red-600">{error}</p>}<div className="flex justify-between gap-2">{editing?<Button type="button" variant="destructive" disabled={busy} onClick={()=>void remove()}>Delete shift</Button>:<span/>}<div className="flex gap-2"><Button type="button" variant="outline" disabled={busy} onClick={()=>setOpen(false)}>Cancel</Button><Button type="submit" disabled={busy||!companyId}>{busy?"Saving…":"Save shift"}</Button></div></div></form></DialogContent></Dialog>
+ </div>;
 }
