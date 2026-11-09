@@ -1,7 +1,9 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { useQuery, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
-import { AlertTriangle, ChevronLeft, ChevronRight, Pencil, Plus, Trash2, X } from "lucide-react";
+import { AlertTriangle, ChevronLeft, ChevronRight, Pencil, Plus, Trash2 } from "lucide-react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { ownerContextOptions } from "@/lib/owner-context";
 import { adminRecordsOptions } from "@/lib/admin-records.query";
@@ -26,13 +28,8 @@ export function IncidentsPage() {
   const { data: adminData } = useSuspenseQuery(adminRecordsOptions);
   const queryClient = useQueryClient();
   const [page, setPage] = useState(0);
-  const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<Incident | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
-  const [jobId, setJobId] = useState("");
-  const [type, setType] = useState<IncidentType>("accident");
-  const [description, setDescription] = useState("");
-  const [saving, setSaving] = useState(false);
   const [actionError, setActionError] = useState("");
 
   const incidentsQuery = useQuery({
@@ -64,49 +61,6 @@ export function IncidentsPage() {
     return () => { void supabase.removeChannel(channel); };
   }, [owner.companyId, queryClient]);
 
-  function openNewIncident() {
-    setEditing(null);
-    setJobId("");
-    setType("accident");
-    setDescription("");
-    setActionError("");
-    setModalOpen(true);
-  }
-  function openEditIncident(incident: Incident) {
-    setEditing(incident);
-    setJobId(incident.job_id ?? "");
-    setType(normalizeIncidentType(incident.type));
-    setDescription(incident.description);
-    setActionError("");
-    setModalOpen(true);
-  }
-  async function submitIncident(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    setSaving(true);
-    setActionError("");
-    try {
-      const payload = {
-        company_id: owner.companyId,
-        job_id: jobId || null,
-        type,
-        description: description.trim(),
-      };
-      const result = editing
-        ? await supabase.from("incidents").update(payload)
-            .eq("id", editing.id).eq("company_id", owner.companyId)
-        : await supabase.from("incidents").insert({ ...payload, reported_by: owner.ownerId });
-      if (result.error) throw new Error(result.error.message);
-      setModalOpen(false);
-      setEditing(null);
-      setDescription("");
-      setPage(0);
-      await queryClient.invalidateQueries({ queryKey: ["incidents", owner.companyId] });
-    } catch (error) {
-      setActionError(error instanceof Error ? error.message : "The incident could not be saved.");
-    } finally {
-      setSaving(false);
-    }
-  }
   async function deleteIncident(incident: Incident) {
     if (!window.confirm(`Delete this ${incident.type} incident?`)) return;
     setActionError("");
@@ -132,7 +86,7 @@ export function IncidentsPage() {
   return <section className="space-y-6">
     <header className="flex flex-wrap items-center justify-between gap-3">
       <div><h1 className="text-[28px] font-bold">Safety &amp; Compliance</h1><p className="mt-1 text-sm text-muted-foreground">Review scheduled services and record safety incidents.</p></div>
-      <Button onClick={openNewIncident} className="rounded-xl"><Plus className="mr-2 size-4" />Report Incident</Button>
+      <ReportIncidentButton jobs={jobs} onSaved={() => setPage(0)} />
     </header>
 
     <section className="space-y-3" aria-labelledby="safety-jobs-title">
@@ -151,7 +105,7 @@ export function IncidentsPage() {
 
     <section className="space-y-3" aria-labelledby="incidents-title">
       <div><h2 id="incidents-title" className="text-lg font-semibold">Reported Incidents</h2><p className="text-sm text-muted-foreground">Incident reports are scoped to this company and update in real time.</p></div>
-      {actionError && !modalOpen && <p role="alert" className="rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive">{actionError}</p>}
+      {actionError && <p role="alert" className="rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive">{actionError}</p>}
       {incidentsQuery.isLoading ? <p className="py-8 text-center text-sm text-muted-foreground">Loading incidents…</p>
         : incidentsQuery.error ? <p role="alert" className="py-8 text-center text-sm text-destructive">{incidentsQuery.error.message}</p>
         : <div className="overflow-x-auto rounded-xl border border-border bg-card shadow-card">
@@ -162,7 +116,7 @@ export function IncidentsPage() {
               <td className="px-4 py-4">{incident.job_id ? jobById.get(incident.job_id)?.title ?? "Job unavailable" : "No job linked"}</td>
               <td className="max-w-sm whitespace-pre-wrap break-words px-4 py-4">{incident.description}</td>
               <td className="px-4 py-4">{reporterById.get(incident.reported_by) ?? "Workspace member"}</td>
-              <td className="px-4 py-4">{fmt(incident.created_at)}</td><td className="px-4 py-4"><div className="flex gap-2"><Button variant="outline" size="sm" onClick={() => openEditIncident(incident)} aria-label={`Edit ${incident.type} incident`}><Pencil className="size-4" /></Button><Button variant="outline" size="sm" disabled={deletingId === incident.id} onClick={() => void deleteIncident(incident)} aria-label={`Delete ${incident.type} incident`}><Trash2 className="size-4" /></Button></div></td>
+              <td className="px-4 py-4">{fmt(incident.created_at)}</td><td className="px-4 py-4"><div className="flex gap-2"><Button variant="outline" size="sm" onClick={() => setEditing(incident)} aria-label={`Edit ${incident.type} incident`}><Pencil className="size-4" /></Button><Button variant="outline" size="sm" disabled={deletingId === incident.id} onClick={() => void deleteIncident(incident)} aria-label={`Delete ${incident.type} incident`}><Trash2 className="size-4" /></Button></div></td>
             </tr>)}</tbody>
           </table>
           {!incidents.length && <p className="py-10 text-center text-sm text-muted-foreground">No incidents reported.</p>}
@@ -173,15 +127,94 @@ export function IncidentsPage() {
         </div>}
     </section>
 
-    {modalOpen && <div className="fixed inset-0 z-50 grid place-items-center bg-foreground/40 p-4" role="presentation" onMouseDown={event => { if (event.target === event.currentTarget) setModalOpen(false); }}>
-      <form role="dialog" aria-modal="true" aria-labelledby="incident-form-title" onSubmit={event => void submitIncident(event)} className="w-full max-w-lg space-y-4 rounded-2xl border border-border bg-card p-5 shadow-xl">
-        <header className="flex items-center justify-between"><h2 id="incident-form-title" className="text-xl font-semibold">{editing ? "Edit Incident" : "Report Incident"}</h2><Button type="button" variant="ghost" size="icon" onClick={() => setModalOpen(false)} aria-label="Close"><X className="size-4" /></Button></header>
-        <label className="grid gap-1 text-sm font-medium">Related job (optional)<select value={jobId} onChange={event => setJobId(event.target.value)} className="h-10 rounded-lg border border-input bg-background px-3 font-normal"><option value="">No job linked</option>{jobs.map(job => <option key={job.id} value={job.id}>{job.title} — {job.clients?.name ?? "No customer"}</option>)}</select></label>
-        <label className="grid gap-1 text-sm font-medium">Incident type<select required value={type} onChange={event => setType(event.target.value as IncidentType)} className="h-10 rounded-lg border border-input bg-background px-3 font-normal">{incidentTypes.map(option => <option key={option} value={option}>{option}</option>)}</select></label>
-        <label className="grid gap-1 text-sm font-medium">Description<textarea required rows={4} maxLength={5000} value={description} onChange={event => setDescription(event.target.value)} className="rounded-lg border border-input bg-background px-3 py-2 font-normal" placeholder="Describe what happened and any immediate action taken." /></label>
-        {actionError && <p role="alert" className="text-sm text-destructive">{actionError}</p>}
-        <footer className="flex justify-end gap-2"><Button type="button" variant="outline" onClick={() => setModalOpen(false)}>Cancel</Button><Button type="submit" disabled={saving}>{saving ? "Saving…" : editing ? "Save Changes" : "Submit Report"}</Button></footer>
-      </form>
-    </div>}
+    {editing && <IncidentForm jobs={jobs} incident={editing} onClose={() => setEditing(null)} onSaved={() => setPage(0)} />}
   </section>;
+}
+
+type IncidentJobs = { id: string; title: string; clients?: { name: string } | null }[];
+
+export function ReportIncidentButton({ jobs, onSaved }: { jobs: IncidentJobs; onSaved?: () => void }) {
+  const [open, setOpen] = useState(false);
+  return <>
+    <Button type="button" onClick={() => setOpen(true)} className="rounded-xl">
+      <Plus className="size-4" />Report Incident
+    </Button>
+    {open && <IncidentForm jobs={jobs} onClose={() => setOpen(false)} onSaved={() => onSaved?.()} />}
+  </>;
+}
+
+function IncidentForm({ jobs, incident, onClose, onSaved }: {
+  jobs: IncidentJobs;
+  incident?: Incident;
+  onClose: () => void;
+  onSaved: () => void;
+}) {
+  const { data: owner } = useSuspenseQuery(ownerContextOptions);
+  const queryClient = useQueryClient();
+  const [jobId, setJobId] = useState(incident?.job_id ?? "");
+  const [type, setType] = useState<IncidentType>(incident ? normalizeIncidentType(incident.type) : "accident");
+  const [description, setDescription] = useState(incident?.description ?? "");
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+
+  async function submitIncident(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (saving) return;
+    const trimmedDescription = description.trim();
+    if (!trimmedDescription) {
+      setError("Enter a description before submitting.");
+      return;
+    }
+    setSaving(true);
+    setError("");
+    try {
+      const payload = { company_id: owner.companyId, job_id: jobId || null, type, description: trimmedDescription };
+      const result = incident
+        ? await supabase.from("incidents").update(payload)
+            .eq("id", incident.id).eq("company_id", owner.companyId).select("id").single()
+        : await supabase.from("incidents").insert({ ...payload, reported_by: owner.ownerId });
+      if (result.error) throw new Error(result.error.message);
+      void queryClient.invalidateQueries({ queryKey: ["incidents", owner.companyId] });
+      toast.success(incident ? "Incident updated" : "Incident reported");
+      onSaved();
+      onClose();
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "The incident could not be saved.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return <Dialog open onOpenChange={open => { if (!open && !saving) onClose(); }}>
+    <DialogContent className="max-h-[90dvh] overflow-y-auto">
+      <DialogHeader>
+        <DialogTitle>{incident ? "Edit Incident" : "Report Incident"}</DialogTitle>
+        <DialogDescription>Record what happened and optionally link a job.</DialogDescription>
+      </DialogHeader>
+      <form onSubmit={event => void submitIncident(event)} className="space-y-4">
+        <label className="grid gap-1 text-sm font-medium">
+          Incident type
+          <select required value={type} onChange={event => setType(event.target.value as IncidentType)} className="h-10 rounded-lg border border-input bg-background px-3 font-normal">
+            {incidentTypes.map(option => <option key={option} value={option}>{option}</option>)}
+          </select>
+        </label>
+        <label className="grid gap-1 text-sm font-medium">
+          Description
+          <textarea required rows={4} maxLength={5000} value={description} onChange={event => setDescription(event.target.value)} className="rounded-lg border border-input bg-background px-3 py-2 font-normal" placeholder="Describe what happened and any immediate action taken." />
+        </label>
+        <label className="grid gap-1 text-sm font-medium">
+          Related job (optional)
+          <select value={jobId} onChange={event => setJobId(event.target.value)} className="h-10 rounded-lg border border-input bg-background px-3 font-normal">
+            <option value="">No job linked</option>
+            {jobs.map(job => <option key={job.id} value={job.id}>{job.title} — {job.clients?.name ?? "No customer"}</option>)}
+          </select>
+        </label>
+        {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
+        <footer className="flex justify-end gap-2">
+          <Button type="button" variant="outline" disabled={saving} onClick={onClose}>Cancel</Button>
+          <Button type="submit" disabled={saving}>{saving ? "Saving…" : incident ? "Save Changes" : "Submit Report"}</Button>
+        </footer>
+      </form>
+    </DialogContent>
+  </Dialog>;
 }
