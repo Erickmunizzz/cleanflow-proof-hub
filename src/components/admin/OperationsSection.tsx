@@ -1,6 +1,6 @@
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
-import { Download, ClipboardCheck, CalendarDays, Users } from "lucide-react";
+import { Download, ClipboardCheck, CalendarDays } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { AdminDataBoundary } from "./AdminSession";
 import { adminRecordsOptions } from "@/lib/admin-records.query";
@@ -11,10 +11,11 @@ import { KeyRegisterPage } from "@/components/admin/KeyRegisterPage";
 import { IncidentsPage } from "@/components/admin/IncidentsPage";
 import { AddReportButton, ReportLists } from "@/components/admin/ReportsPage";
 import { InvoicesPage, WagesPage } from "./FinancePages";
+import { CompanyStructure } from "./CompanyStructure";
 import { CheckinPage } from "@/components/admin/CheckinPage";
 
 export function OperationsSection({ section, label }: { section: string; label: string }) {
-  return <AdminDataBoundary>{section === "invoices" ? <InvoicesPage /> : section === "wages" ? <WagesPage /> : section === "messages" ? <div className="space-y-6"><h1 className="text-[28px] font-bold">{label}</h1><OwnerMessages /></div> : section === "scheduling" ? <SchedulingCalendar /> : section === "keys" ? <KeyRegisterPage /> : section === "safety" ? <IncidentsPage /> : section === "checkin" ? <CheckinPage /> : <SectionContent section={section} label={label} />}</AdminDataBoundary>;
+  return <AdminDataBoundary>{section === "structure" ? <CompanyStructure /> : section === "invoices" ? <InvoicesPage /> : section === "wages" ? <WagesPage /> : section === "messages" ? <div className="space-y-6"><h1 className="text-[28px] font-bold">{label}</h1><OwnerMessages /></div> : section === "scheduling" ? <SchedulingCalendar /> : section === "keys" ? <KeyRegisterPage /> : section === "safety" ? <IncidentsPage /> : section === "checkin" ? <CheckinPage /> : <SectionContent section={section} label={label} />}</AdminDataBoundary>;
 }
 const fmt = (value: string | null) => value ? new Date(value).toLocaleString("en-GB") : "—";
 function SectionContent({ section, label }: { section: string; label: string }) {
@@ -27,8 +28,7 @@ function SectionContent({ section, label }: { section: string; label: string }) 
   }
   return <div className="space-y-6">
     <div className="flex flex-wrap items-center justify-between gap-3"><h1 className="text-[28px] font-bold">{label}</h1><div className="flex flex-wrap gap-2">{section === "reports" && <AddReportButton />}<Button asChild variant="outline" className="rounded-xl"><Link to="/admin/jobs"><CalendarDays />Jobs</Link></Button>{!["keys", "messages", "settings"].includes(section) && <Button onClick={exportJobs} variant="outline" className="rounded-xl"><Download />Export jobs</Button>}</div></div>
-    {section === "structure" ? <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">{data.staff.map(person => <div key={person.id} className="rounded-xl border border-border bg-card p-5 shadow-card"><Users className="mb-4 size-6 text-primary" /><h2 className="font-semibold">{person.name}</h2><p className="mt-1 text-sm text-muted-foreground">{person.role ?? "No role recorded"}</p><p className="mt-3 break-all text-sm">{person.email ?? "—"}</p></div>)}{!data.staff.length && <p className="text-sm text-muted-foreground">No staff records.</p>}</div>
-    : section === "messages" ? <OwnerMessages />
+    {section === "messages" ? <OwnerMessages />
     : section === "client-portal" ? <div className="space-y-4"><p className="text-sm text-muted-foreground">Internal customer job records. Customer access is not enabled.</p>{data.clients.map(client => <div key={client.id} className="border-b border-border py-4"><h2 className="font-semibold">{client.name}</h2><p className="mt-2 text-sm text-muted-foreground">{data.jobs.filter(job => job.client_id === client.id).length} jobs</p>{data.jobs.filter(job => job.client_id === client.id).map(job => <div key={job.id} className="mt-2 flex justify-between gap-3 text-sm"><span>{job.title}</span><span className="text-muted-foreground">{job.status.replaceAll("_", " ")}</span></div>)}</div>)}</div>
     : <>
       {section === "reports" && <div className="grid grid-cols-3 gap-4 border-y border-border py-5">{["scheduled", "in_progress", "completed"].map(status => <div key={status}><div className="text-sm capitalize text-muted-foreground">{status.replaceAll("_", " ")}</div><div className="mt-2 text-2xl font-bold">{data.jobs.filter(job => job.status === status).length}</div></div>)}</div>}

@@ -890,6 +890,8 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      get_company_structure: { Args: { target_company: string }; Returns: Json }
+      save_company_structure: { Args: { target_company: string; expected: Json; changes: Json }; Returns: Json }
       wage_listing: {
         Args: { target_company: string; period_start: string; period_end: string; include_cancelled: boolean }
         Returns: { job_id: string; staff_id: string; client_id: string | null; workplace: string | null; title: string; status: string; hours: number; work_type: string | null; is_excluded: boolean; periodic: number; overtime: number; personal: number; special: number }[]
