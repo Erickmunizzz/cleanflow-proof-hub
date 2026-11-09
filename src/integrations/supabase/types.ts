@@ -235,6 +235,58 @@ export type Database = {
           },
         ]
       }
+      job_photo_documentation: {
+        Row: {
+          caption: string | null
+          company_id: string
+          created_at: string
+          created_by: string | null
+          id: string
+          job_id: string
+          photo_url: string
+        }
+        Insert: {
+          caption?: string | null
+          company_id: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          job_id: string
+          photo_url: string
+        }
+        Update: {
+          caption?: string | null
+          company_id?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          job_id?: string
+          photo_url?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "job_photo_documentation_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "job_photo_documentation_creator_same_company_fkey"
+            columns: ["company_id", "created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["company_id", "id"]
+          },
+          {
+            foreignKeyName: "job_photo_documentation_job_same_company_fkey"
+            columns: ["company_id", "job_id"]
+            isOneToOne: false
+            referencedRelation: "jobs"
+            referencedColumns: ["company_id", "id"]
+          },
+        ]
+      }
       jobs: {
         Row: {
           check_in_at: string | null
@@ -398,6 +450,119 @@ export type Database = {
           },
         ]
       }
+      material_requests: {
+        Row: {
+          company_id: string
+          created_at: string
+          id: string
+          material_id: string
+          notes: string | null
+          quantity: number
+          requested_by: string | null
+          status: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          id?: string
+          material_id: string
+          notes?: string | null
+          quantity: number
+          requested_by?: string | null
+          status?: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          id?: string
+          material_id?: string
+          notes?: string | null
+          quantity?: number
+          requested_by?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "material_requests_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "material_requests_material_same_company_fkey"
+            columns: ["company_id", "material_id"]
+            isOneToOne: false
+            referencedRelation: "materials"
+            referencedColumns: ["company_id", "id"]
+          },
+          {
+            foreignKeyName: "material_requests_requester_same_company_fkey"
+            columns: ["company_id", "requested_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["company_id", "id"]
+          },
+        ]
+      }
+      material_transfers: {
+        Row: {
+          company_id: string
+          created_at: string
+          from_location: string
+          id: string
+          material_id: string
+          notes: string | null
+          quantity: number
+          to_location: string
+          transferred_by: string | null
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          from_location: string
+          id?: string
+          material_id: string
+          notes?: string | null
+          quantity: number
+          to_location: string
+          transferred_by?: string | null
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          from_location?: string
+          id?: string
+          material_id?: string
+          notes?: string | null
+          quantity?: number
+          to_location?: string
+          transferred_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "material_transfers_actor_same_company_fkey"
+            columns: ["company_id", "transferred_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["company_id", "id"]
+          },
+          {
+            foreignKeyName: "material_transfers_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "material_transfers_material_same_company_fkey"
+            columns: ["company_id", "material_id"]
+            isOneToOne: false
+            referencedRelation: "materials"
+            referencedColumns: ["company_id", "id"]
+          },
+        ]
+      }
       materials: {
         Row: {
           category: string | null
@@ -499,6 +664,64 @@ export type Database = {
             columns: ["company_id", "sender_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["company_id", "id"]
+          },
+        ]
+      }
+      nfc_tags: {
+        Row: {
+          client_id: string | null
+          company_id: string
+          created_at: string
+          id: string
+          is_active: boolean
+          job_id: string | null
+          label: string
+          last_scanned_at: string | null
+          tag_code: string
+        }
+        Insert: {
+          client_id?: string | null
+          company_id: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          job_id?: string | null
+          label: string
+          last_scanned_at?: string | null
+          tag_code: string
+        }
+        Update: {
+          client_id?: string | null
+          company_id?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          job_id?: string | null
+          label?: string
+          last_scanned_at?: string | null
+          tag_code?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "nfc_tags_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "nfc_tags_customer_same_company_fkey"
+            columns: ["company_id", "client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["company_id", "id"]
+          },
+          {
+            foreignKeyName: "nfc_tags_job_same_company_fkey"
+            columns: ["company_id", "job_id"]
+            isOneToOne: false
+            referencedRelation: "jobs"
             referencedColumns: ["company_id", "id"]
           },
         ]
