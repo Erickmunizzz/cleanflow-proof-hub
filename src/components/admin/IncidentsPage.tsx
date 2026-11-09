@@ -1,6 +1,6 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { useQuery, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
-import { AlertTriangle, ChevronLeft, ChevronRight, Plus, X } from "lucide-react";
+import { AlertTriangle, ChevronLeft, ChevronRight, Pencil, Plus, Trash2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { ownerContextOptions } from "@/lib/owner-context";
@@ -8,6 +8,16 @@ import { adminRecordsOptions } from "@/lib/admin-records.query";
 import type { Tables } from "@/integrations/supabase/types";
 
 type Incident = Tables<"incidents">;
+type IncidentType = "accident" | "damage" | "complaint" | "other";
+const incidentTypes: IncidentType[] = ["accident", "damage", "complaint", "other"];
+function normalizeIncidentType(value: string): IncidentType {
+  const normalized = value.trim().toLowerCase();
+  if (incidentTypes.includes(normalized as IncidentType)) return normalized as IncidentType;
+  if (normalized.includes("hazard") || normalized.includes("injur") || normalized.includes("accident")) return "accident";
+  if (normalized.includes("damage") || normalized.includes("equipment")) return "damage";
+  if (normalized.includes("complaint")) return "complaint";
+  return "other";
+}
 const pageSize = 25;
 const fmt = (value: string | null) => value ? new Date(value).toLocaleString("en-GB") : "—";
 
@@ -17,8 +27,10 @@ export function IncidentsPage() {
   const queryClient = useQueryClient();
   const [page, setPage] = useState(0);
   const [modalOpen, setModalOpen] = useState(false);
+  const [editing, setEditing] = useState<Incident | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
   const [jobId, setJobId] = useState("");
-  const [type, setType] = useState("Hazard");
+  const [type, setType] = useState<IncidentType>("accident");
   const [description, setDescription] = useState("");
   const [saving, setSaving] = useState(false);
   const [actionError, setActionError] = useState("");
@@ -52,23 +64,57 @@ export function IncidentsPage() {
     return () => { void supabase.removeChannel(channel); };
   }, [owner.companyId, queryClient]);
 
+  function openNewIncident() {
+    setEditing(null);
+    setJobId("");
+    setType("accident");
+    setDescription("");
+    setActionError("");
+    setModalOpen(true);
+  }
+  function openEditIncident(incident: Incident) {
+    setEditing(incident);
+    setJobId(incident.job_id ?? "");
+    setType(normalizeIncidentType(incident.type));
+    setDescription(incident.description);
+    setActionError("");
+    setModalOpen(true);
+  }
   async function submitIncident(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setSaving(true);
     setActionError("");
-    const { error } = await supabase.from("incidents").insert({
-      company_id: owner.companyId,
-      job_id: jobId,
-      type: type.trim(),
-      description: description.trim(),
-      reported_by: owner.ownerId,
-    });
-    setSaving(false);
+    try {
+      const payload = {
+        company_id: owner.companyId,
+        job_id: jobId || null,
+        type,
+        description: description.trim(),
+      };
+      const result = editing
+        ? await supabase.from("incidents").update(payload)
+            .eq("id", editing.id).eq("company_id", owner.companyId)
+        : await supabase.from("incidents").insert({ ...payload, reported_by: owner.ownerId });
+      if (result.error) throw new Error(result.error.message);
+      setModalOpen(false);
+      setEditing(null);
+      setDescription("");
+      setPage(0);
+      await queryClient.invalidateQueries({ queryKey: ["incidents", owner.companyId] });
+    } catch (error) {
+      setActionError(error instanceof Error ? error.message : "The incident could not be saved.");
+    } finally {
+      setSaving(false);
+    }
+  }
+  async function deleteIncident(incident: Incident) {
+    if (!window.confirm(`Delete this ${incident.type} incident?`)) return;
+    setActionError("");
+    setDeletingId(incident.id);
+    const { error } = await supabase.from("incidents").delete()
+      .eq("id", incident.id).eq("company_id", owner.companyId);
+    setDeletingId(null);
     if (error) { setActionError(error.message); return; }
-    setModalOpen(false);
-    setType("Hazard");
-    setDescription("");
-    setPage(0);
     await queryClient.invalidateQueries({ queryKey: ["incidents", owner.companyId] });
   }
 
@@ -81,7 +127,7 @@ export function IncidentsPage() {
   return <section className="space-y-6">
     <header className="flex flex-wrap items-center justify-between gap-3">
       <div><h1 className="text-[28px] font-bold">Safety &amp; Compliance</h1><p className="mt-1 text-sm text-muted-foreground">Review scheduled services and record safety incidents.</p></div>
-      <Button onClick={() => { setJobId(jobs[0]?.id ?? ""); setActionError(""); setModalOpen(true); }} disabled={!jobs.length} className="rounded-xl"><Plus className="mr-2 size-4" />Report Incident</Button>
+      <Button onClick={openNewIncident} className="rounded-xl"><Plus className="mr-2 size-4" />Report Incident</Button>
     </header>
 
     <section className="space-y-3" aria-labelledby="safety-jobs-title">
@@ -105,13 +151,13 @@ export function IncidentsPage() {
         : incidentsQuery.error ? <p role="alert" className="py-8 text-center text-sm text-destructive">{incidentsQuery.error.message}</p>
         : <div className="overflow-x-auto rounded-xl border border-border bg-card shadow-card">
           <table className="w-full min-w-[700px] text-left text-sm">
-            <thead className="bg-surface-2 text-muted-foreground"><tr>{["Type", "Job", "Description", "Reported by", "Reported"].map(label => <th key={label} className="px-4 py-3 font-medium">{label}</th>)}</tr></thead>
+            <thead className="bg-surface-2 text-muted-foreground"><tr>{["Type", "Job", "Description", "Reported by", "Reported", "Actions"].map(label => <th key={label} className="px-4 py-3 font-medium">{label}</th>)}</tr></thead>
             <tbody>{incidents.map(incident => <tr key={incident.id} className="border-t border-border">
               <td className="px-4 py-4"><span className="inline-flex items-center gap-2 font-semibold"><AlertTriangle className="size-4 text-primary" />{incident.type}</span></td>
-              <td className="px-4 py-4">{jobById.get(incident.job_id)?.title ?? "Job unavailable"}</td>
+              <td className="px-4 py-4">{incident.job_id ? jobById.get(incident.job_id)?.title ?? "Job unavailable" : "No job linked"}</td>
               <td className="max-w-sm whitespace-pre-wrap break-words px-4 py-4">{incident.description}</td>
               <td className="px-4 py-4">{reporterById.get(incident.reported_by) ?? "Workspace member"}</td>
-              <td className="px-4 py-4">{fmt(incident.created_at)}</td>
+              <td className="px-4 py-4">{fmt(incident.created_at)}</td><td className="px-4 py-4"><div className="flex gap-2"><Button variant="outline" size="sm" onClick={() => openEditIncident(incident)} aria-label={`Edit ${incident.type} incident`}><Pencil className="size-4" /></Button><Button variant="outline" size="sm" disabled={deletingId === incident.id} onClick={() => void deleteIncident(incident)} aria-label={`Delete ${incident.type} incident`}><Trash2 className="size-4" /></Button></div></td>
             </tr>)}</tbody>
           </table>
           {!incidents.length && <p className="py-10 text-center text-sm text-muted-foreground">No incidents reported.</p>}
@@ -124,12 +170,12 @@ export function IncidentsPage() {
 
     {modalOpen && <div className="fixed inset-0 z-50 grid place-items-center bg-foreground/40 p-4" role="presentation" onMouseDown={event => { if (event.target === event.currentTarget) setModalOpen(false); }}>
       <form role="dialog" aria-modal="true" aria-labelledby="incident-form-title" onSubmit={event => void submitIncident(event)} className="w-full max-w-lg space-y-4 rounded-2xl border border-border bg-card p-5 shadow-xl">
-        <header className="flex items-center justify-between"><h2 id="incident-form-title" className="text-xl font-semibold">Report Incident</h2><Button type="button" variant="ghost" size="icon" onClick={() => setModalOpen(false)} aria-label="Close"><X className="size-4" /></Button></header>
-        <label className="grid gap-1 text-sm font-medium">Related job<select required value={jobId} onChange={event => setJobId(event.target.value)} className="h-10 rounded-lg border border-input bg-background px-3 font-normal"><option value="">Select a job</option>{jobs.map(job => <option key={job.id} value={job.id}>{job.title} — {job.clients?.name ?? "No customer"}</option>)}</select></label>
-        <label className="grid gap-1 text-sm font-medium">Incident type<select value={type} onChange={event => setType(event.target.value)} className="h-10 rounded-lg border border-input bg-background px-3 font-normal">{["Hazard", "Injury", "Property damage", "Equipment issue", "Other"].map(option => <option key={option}>{option}</option>)}</select></label>
+        <header className="flex items-center justify-between"><h2 id="incident-form-title" className="text-xl font-semibold">{editing ? "Edit Incident" : "Report Incident"}</h2><Button type="button" variant="ghost" size="icon" onClick={() => setModalOpen(false)} aria-label="Close"><X className="size-4" /></Button></header>
+        <label className="grid gap-1 text-sm font-medium">Related job (optional)<select value={jobId} onChange={event => setJobId(event.target.value)} className="h-10 rounded-lg border border-input bg-background px-3 font-normal"><option value="">No job linked</option>{jobs.map(job => <option key={job.id} value={job.id}>{job.title} — {job.clients?.name ?? "No customer"}</option>)}</select></label>
+        <label className="grid gap-1 text-sm font-medium">Incident type<select required value={type} onChange={event => setType(event.target.value as IncidentType)} className="h-10 rounded-lg border border-input bg-background px-3 font-normal">{incidentTypes.map(option => <option key={option} value={option}>{option}</option>)}</select></label>
         <label className="grid gap-1 text-sm font-medium">Description<textarea required rows={4} maxLength={5000} value={description} onChange={event => setDescription(event.target.value)} className="rounded-lg border border-input bg-background px-3 py-2 font-normal" placeholder="Describe what happened and any immediate action taken." /></label>
         {actionError && <p role="alert" className="text-sm text-destructive">{actionError}</p>}
-        <footer className="flex justify-end gap-2"><Button type="button" variant="outline" onClick={() => setModalOpen(false)}>Cancel</Button><Button type="submit" disabled={saving || !jobId}>{saving ? "Submitting…" : "Submit Report"}</Button></footer>
+        <footer className="flex justify-end gap-2"><Button type="button" variant="outline" onClick={() => setModalOpen(false)}>Cancel</Button><Button type="submit" disabled={saving}>{saving ? "Saving…" : editing ? "Save Changes" : "Submit Report"}</Button></footer>
       </form>
     </div>}
   </section>;
