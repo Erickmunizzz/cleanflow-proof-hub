@@ -785,6 +785,18 @@ export type Database = {
           },
         ]
       }
+      staff_absences: {
+        Row: { id: string; company_id: string; staff_id: string; absence_type: string; start_date: string; end_date: string; reason: string; status: string; created_at: string }
+        Insert: { id?: string; company_id: string; staff_id: string; absence_type: string; start_date: string; end_date: string; reason: string; status?: string; created_at?: string }
+        Update: { status?: string }
+        Relationships: [{
+          foreignKeyName: "staff_absences_staff_company_fkey"
+          columns: ["company_id", "staff_id"]
+          isOneToOne: false
+          referencedRelation: "staff"
+          referencedColumns: ["company_id", "id"]
+        }]
+      }
       staff: {
         Row: {
           company_id: string | null

@@ -6,6 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { ownerContextOptions } from "@/lib/owner-context";
+import { absenceDate, absenceTypeLabel } from "@/lib/staff-absences";
+import { readAllRows } from "@/lib/supabase-pages";
 import { adminRecordsOptions } from "@/lib/admin-records.query";
 const input = "h-10 rounded-lg border border-input bg-background px-3 text-sm";
 const money = (value: number) => new Intl.NumberFormat("en-GB", { style: "currency", currency: "GBP" }).format(value);
@@ -16,7 +18,7 @@ function useFinanceRealtime(companyId: string) {
   useEffect(() => {
     const refresh = () => { void client.invalidateQueries({ queryKey: ["finance", companyId] }); void client.invalidateQueries({ queryKey: ["admin-records"] }); };
     const channel = supabase.channel(`finance-${companyId}`);
-    for (const table of ["invoices", "staff_wages", "jobs", "staff", "clients"]) {
+    for (const table of ["invoices", "staff_wages", "staff_absences", "jobs", "staff", "clients"]) {
       channel.on("postgres_changes", { event: "INSERT", schema: "public", table, filter: `company_id=eq.${companyId}` }, refresh)
         .on("postgres_changes", { event: "UPDATE", schema: "public", table, filter: `company_id=eq.${companyId}` }, refresh)
         .on("postgres_changes", { event: "DELETE", schema: "public", table }, refresh);
@@ -108,10 +110,21 @@ export function WagesPage() {
     queryFn: async () => {
       const hours = await supabase.rpc("get_wage_hours", { target_company: owner.companyId, start_date: start, end_date: end }).range(page * 25, page * 25 + 25);
       if (hours.error) throw new Error(hours.error.message);
-      const ids = hours.data.slice(0, 25).map(row => row.staff_id);
-      const saved = ids.length ? await supabase.from("staff_wages").select("*").eq("company_id", owner.companyId).eq("period_start", start).eq("period_end", end).in("staff_id", ids) : { data: [], error: null };
+      const rows = hours.data.slice(0, 25);
+      const ids = rows.map(row => row.staff_id);
+      const more = hours.data.length > 25;
+      if (!ids.length) return { rows, more, saved: [], absences: [] };
+      const [saved, absences] = await Promise.all([
+        supabase.from("staff_wages").select("*").eq("company_id", owner.companyId)
+          .eq("period_start", start).eq("period_end", end).in("staff_id", ids),
+        readAllRows((from, to) => supabase.from("staff_absences")
+          .select("id,staff_id,absence_type,start_date,end_date")
+          .eq("company_id", owner.companyId).eq("status", "approved").in("staff_id", ids)
+          .lte("start_date", end).gte("end_date", start)
+          .order("start_date").order("id").range(from, to)),
+      ]);
       if (saved.error) throw new Error(saved.error.message);
-      return { rows: hours.data.slice(0, 25), more: hours.data.length > 25, saved: saved.data ?? [] };
+      return { rows, more, saved: saved.data ?? [], absences };
     },
   });
   async function save(event: FormEvent<HTMLFormElement>, staffId: string) {
@@ -129,11 +142,22 @@ export function WagesPage() {
   return <section className="space-y-6"><h1 className="text-[28px] font-bold">Wages &amp; Hours</h1>
     <div className="flex flex-wrap gap-4"><label className="grid gap-1 text-sm">Period start<input className={input} type="date" value={start} disabled={Boolean(saving)} onChange={event => { setStart(event.target.value); setPage(0); }} /></label><label className="grid gap-1 text-sm">Period end<input className={input} type="date" value={end} disabled={Boolean(saving)} onChange={event => { setEnd(event.target.value); setPage(0); }} /></label></div>
     <p className="text-sm text-muted-foreground">Completed jobs with valid check-in and check-out only. Hours are limited to the selected dates in Europe/London. Breaks are not deducted. Rates are saved per employee and period; totals update when attendance changes. These are gross estimates, not payroll payments.</p>
+    <p className="text-sm text-muted-foreground">Approved absences are shown for review. Pay and worked hours are unchanged.</p>
     {error && <p role="alert" className="text-destructive">{error}</p>}
     {!valid ? <p role="alert">Choose a valid start and end date.</p> : summary.isPending ? <p>Loading worked hours…</p> : summary.error ? <p role="alert" className="text-destructive">{summary.error.message}</p> : <div className="overflow-x-auto rounded-xl border border-border bg-card">
-      <table className="w-full min-w-[650px] text-left text-sm"><thead className="bg-surface-2"><tr>{["Employee", "Worked hours", "Hourly rate (GBP)", "Saved total (GBP)"].map(label => <th className="p-4" key={label}>{label}</th>)}</tr></thead><tbody>{summary.data.rows.map(row => {
+      <table className="w-full min-w-[650px] text-left text-sm"><thead className="bg-surface-2"><tr>{["Employee", "Worked hours", "Approved time off", "Hourly rate (GBP)", "Saved total (GBP)"].map(label => <th className="p-4" key={label}>{label}</th>)}</tr></thead><tbody>{summary.data.rows.map(row => {
         const saved = summary.data.saved.find(wage => wage.staff_id === row.staff_id);
-        return <tr key={row.staff_id} className="border-t border-border"><td className="p-4 font-semibold">{row.staff_name}</td><td className="p-4">{Number(row.total_hours).toFixed(4)}</td><td className="p-4"><form key={`${start}-${end}-${saved?.hourly_rate ?? "new"}`} onSubmit={event => void save(event, row.staff_id)} className="flex gap-2"><input className={`${input} w-28`} aria-label={`Hourly rate for ${row.staff_name}`} name="rate" type="number" min="0" max="99999999.99" step="0.01" required defaultValue={saved?.hourly_rate ?? ""} /><Button disabled={Boolean(saving)} type="submit">{saving === row.staff_id ? "Saving…" : "Save"}</Button></form></td><td className="p-4">{saved ? money(saved.total_amount) : "Set rate and save"}</td></tr>;
+        const timeOff = summary.data.absences.filter(absence => absence.staff_id === row.staff_id);
+        return <tr key={row.staff_id} className="border-t border-border"><td className="p-4 font-semibold">{row.staff_name}</td><td className="p-4">{Number(row.total_hours).toFixed(4)}</td>
+          <td className="p-4">
+            {timeOff.length ? <ul className="space-y-1 text-warning-strong">{timeOff.map(absence => (
+              <li key={absence.id}>
+                {absenceTypeLabel(absence.absence_type)} · {absenceDate(absence.start_date < start ? start : absence.start_date)}
+                {" – "}{absenceDate(absence.end_date > end ? end : absence.end_date)}
+              </li>
+            ))}</ul> : "—"}
+          </td>
+          <td className="p-4"><form key={`${start}-${end}-${saved?.hourly_rate ?? "new"}`} onSubmit={event => void save(event, row.staff_id)} className="flex gap-2"><input className={`${input} w-28`} aria-label={`Hourly rate for ${row.staff_name}`} name="rate" type="number" min="0" max="99999999.99" step="0.01" required defaultValue={saved?.hourly_rate ?? ""} /><Button disabled={Boolean(saving)} type="submit">{saving === row.staff_id ? "Saving…" : "Save"}</Button></form></td><td className="p-4">{saved ? money(saved.total_amount) : "Set rate and save"}</td></tr>;
       })}</tbody></table>{!summary.data.rows.length && <p className="p-8 text-center text-muted-foreground">No employees found.</p>}
       <footer className="flex justify-end gap-2 p-3"><Button variant="outline" disabled={page === 0} onClick={() => setPage(value => value - 1)}>Previous</Button><Button variant="outline" disabled={!summary.data.more} onClick={() => setPage(value => value + 1)}>Next</Button></footer>
     </div>}
