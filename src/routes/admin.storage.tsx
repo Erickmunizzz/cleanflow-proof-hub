@@ -1,8 +1,11 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { InventoryPage } from "@/components/admin/InventoryPage";
+import { InventoryPage, inventoryTabs } from "@/components/admin/InventoryPage";
 import { AdminRecordsError } from "@/components/admin/AdminRecordsError";
 export const Route = createFileRoute("/admin/storage")({
-  validateSearch: (search: Record<string, unknown>) => ({ q: typeof search['q'] === "string" ? search['q'] : "" }),
+  validateSearch: (search: Record<string, unknown>) => ({
+    q: typeof search["q"] === "string" ? search["q"] : "",
+    tab: inventoryTabs.find(tab => tab === search["tab"]),
+  }),
   head: () => ({ meta: [
     { title: "Materials & Replenishment — CleanFlow UK" },
     { name: "description", content: "Materials & Replenishment records in your CleanFlow UK workspace." },
@@ -14,7 +17,12 @@ export const Route = createFileRoute("/admin/storage")({
   errorComponent: AdminRecordsError,
 });
 function Page() {
-  const { q } = Route.useSearch();
+  const { q, tab } = Route.useSearch();
   const navigate = Route.useNavigate();
-  return <InventoryPage search={q} onSearch={q => { void navigate({ search: { q }, replace: true }); } } />;
+  return <InventoryPage
+    search={q}
+    tab={tab ?? "Inventory"}
+    onSearch={q => { void navigate({ search: { q, tab }, replace: true }); }}
+    onTabChange={tab => { void navigate({ search: { q, tab: tab === "Inventory" ? undefined : tab } }); }}
+  />;
 }

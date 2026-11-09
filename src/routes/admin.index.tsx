@@ -8,6 +8,7 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { ownerContextOptions } from "@/lib/owner-context";
 import { cn } from "@/lib/utils";
+import { OverviewMetrics } from "@/components/admin/OverviewMetrics";
 import { AdminDataBoundary } from "@/components/admin/AdminSession";
 import { Button } from "@/components/ui/button";
 import { readAllRows } from "@/lib/supabase-pages";
@@ -298,6 +299,8 @@ function Overview() {
           );
         })}
       </div>
+
+      {companyId && <OverviewMetrics companyId={companyId} />}
 
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
         <div className={cn(card, "p-6 xl:col-span-2")}>

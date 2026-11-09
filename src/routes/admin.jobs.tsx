@@ -11,9 +11,12 @@ import { ownerContextOptions } from "@/lib/owner-context";
 import { AdminDataBoundary } from "@/components/admin/AdminSession";
 import { Button } from "@/components/ui/button";
 import { checklistSummary } from "@/lib/job-summary";
+import { cancelledJobStatuses } from "@/lib/overview-metrics";
 import { readAllRows } from "@/lib/supabase-pages";
 
 export const Route = createFileRoute("/admin/jobs")({
+  validateSearch: (search: Record<string, unknown>): { status?: "cancelled" } =>
+    search["status"] === "cancelled" ? { status: "cancelled" } : {},
   head: () => ({
     meta: [
       { title: "Jobs — CleanFlow UK" },
@@ -55,6 +58,7 @@ function JobsPage() {
 }
 
 function JobsBoard() {
+  const { status } = Route.useSearch();
   const qc = useQueryClient();
   const [open, setOpen] = useState(false);
   const ownerContextQ = useQuery(ownerContextOptions);
@@ -98,7 +102,7 @@ function JobsBoard() {
   if (ownerContextQ.isLoading) return <div className="text-[13px] text-muted-foreground">Loading owner workspace…</div>;
   if (ownerContextQ.isError || !companyId) return <div role="alert" className="space-y-4"><h1 className="text-[28px] font-bold">Jobs</h1><p className="text-sm text-danger">{ownerContextQ.error?.message ?? "Your workspace is unavailable."}</p><Button onClick={() => void ownerContextQ.refetch()}>Try again</Button></div>;
 
-  const jobs = jobsQ.data ?? [];
+  const jobs = (jobsQ.data ?? []).filter(job => !status || cancelledJobStatuses.includes(job.status));
 
   return (
     <div className="space-y-6">
@@ -112,10 +116,12 @@ function JobsBoard() {
         </button>
       </div>
 
+      {status === "cancelled" && <div className="flex items-center gap-3 text-sm"><span>Cancelled jobs</span><Button asChild variant="outline" size="sm"><Link to="/admin/jobs" search={{}}>Show all jobs</Link></Button></div>}
+
       {jobsQ.isError && <div role="alert" className={cn(card, "space-y-3 p-6 text-[13px] text-danger")}>Couldn't load jobs: {jobsQ.error.message}<Button variant="outline" onClick={() => void jobsQ.refetch()}>Try again</Button></div>}
       {jobsQ.isLoading && <div className="text-[13px] text-muted-foreground">Loading jobs…</div>}
       {!jobsQ.isLoading && !jobsQ.isError && jobs.length === 0 && (
-        <div className={cn(card, "p-10 text-center text-[13px] text-muted-foreground")}>No jobs scheduled yet. Add your first job.</div>
+        <div className={cn(card, "p-10 text-center text-[13px] text-muted-foreground")}>{status === "cancelled" ? "No cancelled jobs." : "No jobs scheduled yet. Add your first job."}</div>
       )}
 
       <div className="grid gap-4 lg:grid-cols-2">
@@ -170,14 +176,14 @@ function JobsBoard() {
 
               <div className="flex gap-2">
                 <button
-                  disabled={update.isPending || !!job.check_in_at}
+                  disabled={update.isPending || cancelledJobStatuses.includes(job.status) || !!job.check_in_at}
                   onClick={() => update.mutate({ id: job.id, patch: { check_in_at: new Date().toISOString(), status: "in_progress" } })}
                   className="flex h-9 flex-1 items-center justify-center gap-2 rounded-xl bg-primary text-[13px] font-semibold text-primary-foreground hover:bg-primary/90 disabled:opacity-40"
                 >
                   <LogIn className="h-4 w-4" /> Check in
                 </button>
                 <button
-                  disabled={update.isPending || !job.check_in_at || !!job.check_out_at}
+                  disabled={update.isPending || cancelledJobStatuses.includes(job.status) || !job.check_in_at || !!job.check_out_at}
                   onClick={() => update.mutate({ id: job.id, patch: { check_out_at: new Date().toISOString(), status: "completed" } })}
                   className="flex h-9 flex-1 items-center justify-center gap-2 rounded-xl border border-border bg-card text-[13px] font-semibold hover:bg-accent disabled:opacity-40"
                 >
