@@ -9,6 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { financeSections, ScopedFinanceSettings } from "./ScopedFinanceSettings";
 import { useAdminSession } from "./AdminSession";
 import { supabase } from "@/integrations/supabase/client";
 import { createSettingsDraft, type SettingsDraft } from "@/lib/settings-draft";
@@ -59,6 +60,7 @@ export function SettingsPage() {
   const queryClient = useQueryClient();
   const [draft, setDraft] = useState(createSettingsDraft);
   const [editing, setEditing] = useState<SettingsDraft>(createSettingsDraft);
+  const [finance, setFinance] = useState<(typeof financeSections)[number]["id"] | null>(null);
   const [active, setActive] = useState<SectionId | null>(null);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState("");
@@ -189,7 +191,16 @@ export function SettingsPage() {
           
         </Button>;
       })}
+      {financeSections.map(section => <Button key={section.id} variant="outline" disabled={!companyId}
+        onClick={() => setFinance(section.id)} aria-label={`Configure ${section.title}`}
+        className="group relative h-auto min-h-[195px] w-full flex-col items-start justify-start gap-0 whitespace-normal rounded-xl border-border bg-card p-5 text-left shadow-none transition-shadow hover:bg-card hover:shadow-card-md">
+        <span className="grid size-10 place-items-center rounded-xl border border-border bg-accent text-muted-foreground group-hover:text-primary"><Settings className="size-5" /></span>
+        <span className="mt-4 text-[14px] font-semibold">{section.title}</span>
+        <span className="mt-1 text-[12.5px] font-normal leading-relaxed text-muted-foreground">{section.description}</span>
+        <span className="mt-auto flex items-center gap-1 pt-4 text-[12px] font-medium text-primary">Configure <ArrowRight className="size-3.5" /></span>
+      </Button>)}
     </div>
+    {finance && companyId && <ScopedFinanceSettings section={finance} companyId={companyId} close={() => setFinance(null)} />}
     <Dialog open={active !== null} onOpenChange={value => { if (!value) setActive(null); }}>
       <DialogContent className="max-h-[85dvh] w-[calc(100%-2rem)] max-w-[640px] overflow-y-auto rounded-xl bg-card p-5 sm:p-6">
         <DialogHeader><DialogTitle>{item?.title}</DialogTitle><DialogDescription>Changes are saved to this company workspace in Supabase.</DialogDescription></DialogHeader>

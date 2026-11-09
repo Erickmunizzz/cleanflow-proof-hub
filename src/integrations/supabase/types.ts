@@ -14,6 +14,24 @@ export type Database = {
   }
   public: {
     Tables: {
+      company_invoice_preferences: {
+        Row: { company_id: string; default_interval: string; custom_cycle: number | null; invoice_weekday: number; invoice_month_day: number; cycle_anchor: string; auto_generate: boolean }
+        Insert: { company_id: string; default_interval?: string; custom_cycle?: number | null; invoice_weekday?: number; invoice_month_day?: number; cycle_anchor?: string; auto_generate?: boolean }
+        Update: { default_interval?: string; custom_cycle?: number | null; invoice_weekday?: number; invoice_month_day?: number; cycle_anchor?: string; auto_generate?: boolean }
+        Relationships: []
+      }
+      company_wage_preferences: {
+        Row: { company_id: string; base_hourly_rate: number | null; night_multiplier: number; weekend_multiplier: number; holiday_multiplier: number; overtime_40_multiplier: number; overtime_48_multiplier: number; holiday_region: string }
+        Insert: { company_id: string; base_hourly_rate?: number | null; night_multiplier?: number; weekend_multiplier?: number; holiday_multiplier?: number; overtime_40_multiplier?: number; overtime_48_multiplier?: number; holiday_region?: string }
+        Update: { base_hourly_rate?: number | null; night_multiplier?: number; weekend_multiplier?: number; holiday_multiplier?: number; overtime_40_multiplier?: number; overtime_48_multiplier?: number; holiday_region?: string }
+        Relationships: []
+      }
+      company_integration_preferences: {
+        Row: { company_id: string; xero_sync_invoices: boolean; stripe_payment_links: boolean; slack_webhook_url: string | null; slack_invoice_events: boolean; slack_checkin_events: boolean; slack_cancellation_events: boolean }
+        Insert: { company_id: string; xero_sync_invoices?: boolean; stripe_payment_links?: boolean; slack_webhook_url?: string | null; slack_invoice_events?: boolean; slack_checkin_events?: boolean; slack_cancellation_events?: boolean }
+        Update: { xero_sync_invoices?: boolean; stripe_payment_links?: boolean; slack_webhook_url?: string | null; slack_invoice_events?: boolean; slack_checkin_events?: boolean; slack_cancellation_events?: boolean }
+        Relationships: []
+      }
       job_wage_details: {
         Row: { company_id: string; job_id: string; work_type: string | null; is_excluded: boolean; periodic: number; overtime: number; personal: number; special: number }
         Insert: { company_id: string; job_id: string; work_type?: string | null; is_excluded?: boolean; periodic?: number; overtime?: number; personal?: number; special?: number }
@@ -890,6 +908,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      preview_invoice_amount: { Args: { target_company: string }; Returns: number }
       get_company_structure: { Args: { target_company: string }; Returns: Json }
       save_company_structure: { Args: { target_company: string; expected: Json; changes: Json }; Returns: Json }
       wage_listing: {
