@@ -73,6 +73,47 @@ export type Database = {
         }
         Relationships: []
       }
+      company_settings: {
+        Row: {
+          company_id: string
+          company_name: string
+          language: string
+          settings_data: Json
+          timezone: string
+          updated_at: string
+          welcome_email_template: string
+          welcome_sms_template: string
+        }
+        Insert: {
+          company_id: string
+          company_name: string
+          language?: string
+          settings_data?: Json
+          timezone?: string
+          updated_at?: string
+          welcome_email_template?: string
+          welcome_sms_template?: string
+        }
+        Update: {
+          company_id?: string
+          company_name?: string
+          language?: string
+          settings_data?: Json
+          timezone?: string
+          updated_at?: string
+          welcome_email_template?: string
+          welcome_sms_template?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "company_settings_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: true
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       incidents: {
         Row: {
           company_id: string
