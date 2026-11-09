@@ -120,7 +120,7 @@ export type Database = {
           created_at: string
           description: string
           id: string
-          job_id: string
+          job_id: string | null
           reported_by: string
           type: string
         }
@@ -129,7 +129,7 @@ export type Database = {
           created_at?: string
           description: string
           id?: string
-          job_id: string
+          job_id?: string | null
           reported_by: string
           type: string
         }
@@ -138,7 +138,7 @@ export type Database = {
           created_at?: string
           description?: string
           id?: string
-          job_id?: string
+          job_id?: string | null
           reported_by?: string
           type?: string
         }
