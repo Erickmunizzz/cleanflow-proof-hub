@@ -276,21 +276,19 @@ function Overview() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+      <section aria-label="Operations summaries" className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
         {summaryCards.map((item) => {
           const Icon = ToneIcon[item.tone];
           return (
-            <div key={item.title} className={cn(card, "p-5 transition hover:shadow-[var(--shadow-card-md)]")}>
-              <div className="mb-4 flex items-start justify-between">
-                <div className="flex items-center gap-3">
-                  <div className={cn("grid h-9 w-9 place-items-center rounded-xl", toneIcon[item.tone])}><Icon className="h-5 w-5" /></div>
-                  <div className="text-[14px] font-semibold">{item.title}</div>
-                </div>
+            <div key={item.title} className={cn(card, "min-w-0 p-6 transition hover:shadow-[var(--shadow-card-md)]")}>
+              <div className="mb-3 flex items-center justify-between">
+                <div className={cn("grid h-9 w-9 place-items-center rounded-xl", toneIcon[item.tone])}><Icon className="h-5 w-5" /></div>
                 <span className={cn("h-2.5 w-2.5 rounded-full", toneDot[item.tone])} />
               </div>
+              <h2 className="mb-4 whitespace-nowrap text-sm font-semibold leading-5">{item.title}</h2>
               <div className="space-y-2">
                 {item.rows.map(([label, value]) => (
-                  <div key={label} className="flex justify-between text-[12.5px]">
+                  <div key={label} className="flex justify-between gap-3 text-[12.5px]">
                     <span className="text-muted-foreground">{label}</span><span className="font-semibold">{value}</span>
                   </div>
                 ))}
@@ -298,9 +296,8 @@ function Overview() {
             </div>
           );
         })}
-      </div>
-
-      {companyId && <OverviewMetrics companyId={companyId} />}
+        {companyId && <OverviewMetrics companyId={companyId} />}
+      </section>
 
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
         <div className={cn(card, "p-6 xl:col-span-2")}>

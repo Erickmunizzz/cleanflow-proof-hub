@@ -35,38 +35,36 @@ export function OverviewMetrics({ companyId }: { companyId: string }) {
   }, [companyId, queryClient]);
 
   return (
-    <section aria-label="Additional operations metrics" className="space-y-3">
-      {metrics.isPending && <p role="status" className="text-sm text-muted-foreground">Loading operation metrics…</p>}
+    <>
+      {metrics.isPending && <p role="status" className="col-span-full text-sm text-muted-foreground">Loading operation metrics…</p>}
       {metrics.isError && (
-        <div role="alert" className="flex flex-wrap items-center gap-3 text-sm text-danger">
+        <div role="alert" className="col-span-full flex flex-wrap items-center gap-3 text-sm text-danger">
           Could not refresh operation metrics.
           <Button variant="outline" size="sm" onClick={() => void metrics.refetch()}>Try again</Button>
         </div>
       )}
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        {cards.map(({ title, key, icon: Icon, labels, detail }) => {
-          const content = <>
-            <div className="flex items-center gap-3">
-              <div className="grid size-9 shrink-0 place-items-center rounded-xl bg-primary-soft text-primary"><Icon className="size-5" /></div>
-              <h2 className="flex-1 text-sm font-semibold">{title}</h2>
-              <ArrowRight className="size-4 shrink-0 text-muted-foreground" aria-hidden />
-            </div>
-            <p className="mb-4 mt-2 min-h-8 text-xs text-muted-foreground">{detail}</p>
-            <dl className="space-y-2 text-[12.5px]">
-              {labels.map((label, index) => (
-                <div key={label} className="flex justify-between gap-2">
-                  <dt className="text-muted-foreground">{label}</dt>
-                  <dd className="font-semibold tabular-nums">{metrics.isError ? "—" : metrics.data?.[key][index] ?? "—"}</dd>
-                </div>
-              ))}
-            </dl>
-          </>;
-          const className = "block rounded-2xl border border-border bg-card p-5 shadow-[var(--shadow-card)] transition hover:border-primary/40 hover:shadow-[var(--shadow-card-md)] focus-visible:outline-2 focus-visible:outline-primary";
-          if (key === "cancellations") return <Link key={key} to="/admin/jobs" search={{ status: "cancelled" }} className={className}>{content}</Link>;
-          if (key === "products") return <Link key={key} to="/admin/storage" search={{ q: "", tab: "Product requests" }} className={className}>{content}</Link>;
-          return <Link key={key} to="/admin/$section" params={{ section: key === "returns" ? "keys" : "scheduling" }} className={className}>{content}</Link>;
-        })}
-      </div>
-    </section>
+      {cards.map(({ title, key, icon: Icon, labels, detail }) => {
+        const content = <>
+          <div className="mb-3 flex items-center justify-between gap-3">
+            <div className="grid size-9 shrink-0 place-items-center rounded-xl bg-primary-soft text-primary"><Icon className="size-5" /></div>
+            <ArrowRight className="size-4 shrink-0 text-muted-foreground" aria-hidden />
+          </div>
+          <h2 className="whitespace-nowrap text-sm font-semibold leading-5">{title}</h2>
+          <p className="mb-4 mt-1 text-xs leading-relaxed text-muted-foreground">{detail}</p>
+          <dl className="space-y-2 text-[12.5px]">
+            {labels.map((label, index) => (
+              <div key={label} className="flex justify-between gap-2">
+                <dt className="text-muted-foreground">{label}</dt>
+                <dd className="font-semibold tabular-nums">{metrics.isError ? "—" : metrics.data?.[key][index] ?? "—"}</dd>
+              </div>
+            ))}
+          </dl>
+        </>;
+        const className = "block min-w-0 rounded-2xl border border-border bg-card p-6 shadow-[var(--shadow-card)] transition hover:border-primary/40 hover:shadow-[var(--shadow-card-md)] focus-visible:outline-2 focus-visible:outline-primary";
+        if (key === "cancellations") return <Link key={key} to="/admin/jobs" search={{ status: "cancelled" }} className={className}>{content}</Link>;
+        if (key === "products") return <Link key={key} to="/admin/storage" search={{ q: "", tab: "Product requests" }} className={className}>{content}</Link>;
+        return <Link key={key} to="/admin/$section" params={{ section: key === "returns" ? "keys" : "scheduling" }} className={className}>{content}</Link>;
+      })}
+    </>
   );
 }
