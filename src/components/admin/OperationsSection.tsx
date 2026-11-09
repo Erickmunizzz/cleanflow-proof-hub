@@ -9,9 +9,10 @@ import { OwnerMessages } from "@/components/admin/OwnerMessages";
 import { SchedulingCalendar } from "@/components/admin/SchedulingCalendar";
 import { KeyRegisterPage } from "@/components/admin/KeyRegisterPage";
 import { IncidentsPage } from "@/components/admin/IncidentsPage";
+import { CheckinPage } from "@/components/admin/CheckinPage";
 
 export function OperationsSection({ section, label }: { section: string; label: string }) {
-  return <AdminDataBoundary>{section === "messages" ? <div className="space-y-6"><h1 className="text-[28px] font-bold">{label}</h1><OwnerMessages /></div> : section === "scheduling" ? <SchedulingCalendar /> : section === "keys" ? <KeyRegisterPage /> : section === "safety" ? <IncidentsPage /> : <SectionContent section={section} label={label} />}</AdminDataBoundary>;
+  return <AdminDataBoundary>{section === "messages" ? <div className="space-y-6"><h1 className="text-[28px] font-bold">{label}</h1><OwnerMessages /></div> : section === "scheduling" ? <SchedulingCalendar /> : section === "keys" ? <KeyRegisterPage /> : section === "safety" ? <IncidentsPage /> : section === "checkin" ? <CheckinPage /> : <SectionContent section={section} label={label} />}</AdminDataBoundary>;
 }
 const fmt = (value: string | null) => value ? new Date(value).toLocaleString("en-GB") : "—";
 function SectionContent({ section, label }: { section: string; label: string }) {
