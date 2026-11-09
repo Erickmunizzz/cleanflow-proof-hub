@@ -11,11 +11,12 @@ import { KeyRegisterPage } from "@/components/admin/KeyRegisterPage";
 import { IncidentsPage } from "@/components/admin/IncidentsPage";
 import { AddReportButton, ReportLists } from "@/components/admin/ReportsPage";
 import { InvoicesPage, WagesPage } from "./FinancePages";
+import { PaymentsPage } from "./PaymentsPage";
 import { CompanyStructure } from "./CompanyStructure";
 import { CheckinPage } from "@/components/admin/CheckinPage";
 
 export function OperationsSection({ section, label }: { section: string; label: string }) {
-  return <AdminDataBoundary>{section === "structure" ? <CompanyStructure /> : section === "invoices" ? <InvoicesPage /> : section === "wages" ? <WagesPage /> : section === "messages" ? <div className="space-y-6"><h1 className="text-[28px] font-bold">{label}</h1><OwnerMessages /></div> : section === "scheduling" ? <SchedulingCalendar /> : section === "keys" ? <KeyRegisterPage /> : section === "safety" ? <IncidentsPage /> : section === "checkin" ? <CheckinPage /> : <SectionContent section={section} label={label} />}</AdminDataBoundary>;
+  return <AdminDataBoundary>{section === "payments" ? <PaymentsPage /> : section === "structure" ? <CompanyStructure /> : section === "invoices" ? <InvoicesPage /> : section === "wages" ? <WagesPage /> : section === "messages" ? <div className="space-y-6"><h1 className="text-[28px] font-bold">{label}</h1><OwnerMessages /></div> : section === "scheduling" ? <SchedulingCalendar /> : section === "keys" ? <KeyRegisterPage /> : section === "safety" ? <IncidentsPage /> : section === "checkin" ? <CheckinPage /> : <SectionContent section={section} label={label} />}</AdminDataBoundary>;
 }
 const fmt = (value: string | null) => value ? new Date(value).toLocaleString("en-GB") : "—";
 function SectionContent({ section, label }: { section: string; label: string }) {

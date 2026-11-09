@@ -14,6 +14,12 @@ export type Database = {
   }
   public: {
     Tables: {
+      demo_payment_transactions: {
+        Row: { id: string; company_id: string; kind: string; customer_id: string | null; provider: string | null; amount_pence: number; gateway_fee_pence: number; platform_fee_pence: number; net_pence: number; created_at: string }
+        Insert: never
+        Update: never
+        Relationships: []
+      }
       recurring_invoice_customers: {
         Row: { company_id: string; customer_id: string; amount: number; payment_terms_days: number }
         Insert: { company_id: string; customer_id: string; amount: number; payment_terms_days?: number }
@@ -177,6 +183,7 @@ export type Database = {
       }
       companies: {
         Row: {
+          plan: "trial" | "starter" | "scale"
           created_at: string
           id: string
           name: string
@@ -914,6 +921,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      create_demo_collection: { Args: { target_company: string; target_customer: string; provider_name: string; gross_pence: number }; Returns: Database["public"]["Tables"]["demo_payment_transactions"]["Row"] }
+      demo_payable_jobs: { Args: { target_company: string; first_day: string; last_day: string }; Returns: { job_id: string; title: string; employee: string | null; completed_at: string; amount_pence: number | null }[] }
+      create_demo_payout: { Args: { target_company: string; first_day: string; last_day: string; selected_jobs: string[]; expected_pence: number }; Returns: Database["public"]["Tables"]["demo_payment_transactions"]["Row"] }
+      get_demo_checkout: { Args: { link_id: string }; Returns: { amount_pence: number; provider: string }[] }
       wage_rule_premiums: {
         Args: { target_company: string; period_start: string; period_end: string }
         Returns: { job_id: string; premium_hours: number; overtime_premium_hours: number }[]

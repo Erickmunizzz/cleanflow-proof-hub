@@ -1,6 +1,7 @@
 import {
   LayoutDashboard,
   CalendarDays,
+  CreditCard,
   ClipboardCheck,
   Users,
   Briefcase,
@@ -51,7 +52,7 @@ export const adminNav: AdminNavGroup[] = [
   },
   {
     group: "Finance",
-    items: [{ id: "invoices", label: "Invoicing", icon: FileText }, { id: "wages", label: "Wages & Hours", icon: Clock3 }],
+    items: [{ id: "invoices", label: "Invoicing", icon: FileText }, { id: "wages", label: "Wages & Hours", icon: Clock3 }, { id: "payments", label: "Payments", icon: CreditCard }],
   },
   {
     group: "Quality",

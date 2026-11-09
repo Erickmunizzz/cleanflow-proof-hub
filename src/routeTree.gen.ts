@@ -19,6 +19,7 @@ import { Route as AdminEmployeesRouteImport } from './routes/admin.employees'
 import { Route as AdminJobsRouteImport } from './routes/admin.jobs'
 import { Route as AdminSettingsRouteImport } from './routes/admin.settings'
 import { Route as AdminStorageRouteImport } from './routes/admin.storage'
+import { Route as PaymentsDemoLinkIdRouteImport } from './routes/payments.demo.$linkId'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -70,6 +71,11 @@ const AdminStorageRoute = AdminStorageRouteImport.update({
   path: '/storage',
   getParentRoute: () => AdminRoute,
 } as any)
+const PaymentsDemoLinkIdRoute = PaymentsDemoLinkIdRouteImport.update({
+  id: '/payments/demo/$linkId',
+  path: '/payments/demo/$linkId',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -82,6 +88,7 @@ export interface FileRoutesByFullPath {
   '/admin/settings': typeof AdminSettingsRoute
   '/admin/storage': typeof AdminStorageRoute
   '/admin/': typeof AdminIndexRoute
+  '/payments/demo/$linkId': typeof PaymentsDemoLinkIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -93,6 +100,7 @@ export interface FileRoutesByTo {
   '/admin/settings': typeof AdminSettingsRoute
   '/admin/storage': typeof AdminStorageRoute
   '/admin': typeof AdminIndexRoute
+  '/payments/demo/$linkId': typeof PaymentsDemoLinkIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -106,6 +114,7 @@ export interface FileRoutesById {
   '/admin/settings': typeof AdminSettingsRoute
   '/admin/storage': typeof AdminStorageRoute
   '/admin/': typeof AdminIndexRoute
+  '/payments/demo/$linkId': typeof PaymentsDemoLinkIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -120,6 +129,7 @@ export interface FileRouteTypes {
     | '/admin/settings'
     | '/admin/storage'
     | '/admin/'
+    | '/payments/demo/$linkId'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -131,6 +141,7 @@ export interface FileRouteTypes {
     | '/admin/settings'
     | '/admin/storage'
     | '/admin'
+    | '/payments/demo/$linkId'
   id:
     | '__root__'
     | '/'
@@ -143,12 +154,14 @@ export interface FileRouteTypes {
     | '/admin/settings'
     | '/admin/storage'
     | '/admin/'
+    | '/payments/demo/$linkId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AdminRoute: typeof AdminRouteWithChildren
   AuthRoute: typeof AuthRoute
+  PaymentsDemoLinkIdRoute: typeof PaymentsDemoLinkIdRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -223,6 +236,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminStorageRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/payments/demo/$linkId': {
+      id: '/payments/demo/$linkId'
+      path: '/payments/demo/$linkId'
+      fullPath: '/payments/demo/$linkId'
+      preLoaderRoute: typeof PaymentsDemoLinkIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -252,6 +272,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AdminRoute: AdminRouteWithChildren,
   AuthRoute: AuthRoute,
+  PaymentsDemoLinkIdRoute: PaymentsDemoLinkIdRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
