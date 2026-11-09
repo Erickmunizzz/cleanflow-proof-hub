@@ -14,6 +14,12 @@ export type Database = {
   }
   public: {
     Tables: {
+      job_wage_details: {
+        Row: { company_id: string; job_id: string; work_type: string | null; is_excluded: boolean; periodic: number; overtime: number; personal: number; special: number }
+        Insert: { company_id: string; job_id: string; work_type?: string | null; is_excluded?: boolean; periodic?: number; overtime?: number; personal?: number; special?: number }
+        Update: { work_type?: string | null; is_excluded?: boolean; periodic?: number; overtime?: number; personal?: number; special?: number }
+        Relationships: []
+      }
       invoices: {
         Row: { id: string; company_id: string; customer_id: string; invoice_number: string; amount: number; status: string; due_date: string; created_at: string }
         Insert: { id?: string; company_id: string; customer_id: string; invoice_number: string; amount: number; status?: string; due_date: string; created_at?: string }
@@ -799,6 +805,8 @@ export type Database = {
       }
       staff: {
         Row: {
+          employee_no: string
+          weekly_hours: number | null
           company_id: string | null
           created_at: string
           email: string | null
@@ -810,6 +818,8 @@ export type Database = {
           role: string | null
         }
         Insert: {
+          employee_no?: string
+          weekly_hours?: number | null
           company_id?: string | null
           created_at?: string
           email?: string | null
@@ -821,6 +831,8 @@ export type Database = {
           role?: string | null
         }
         Update: {
+          employee_no?: string
+          weekly_hours?: number | null
           company_id?: string | null
           created_at?: string
           email?: string | null
@@ -878,6 +890,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      wage_listing: {
+        Args: { target_company: string; period_start: string; period_end: string; include_cancelled: boolean }
+        Returns: { job_id: string; staff_id: string; client_id: string | null; workplace: string | null; title: string; status: string; hours: number; work_type: string | null; is_excluded: boolean; periodic: number; overtime: number; personal: number; special: number }[]
+      }
       get_wage_hours: { Args: { target_company: string; start_date: string; end_date: string }; Returns: { staff_id: string; staff_name: string; total_hours: number }[] }
     }
     Enums: {

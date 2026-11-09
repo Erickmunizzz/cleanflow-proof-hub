@@ -13,11 +13,11 @@ type Message = Pick<Tables<"messages">, "id" | "sender_id" | "recipient_id" | "b
 
 const card = "rounded-2xl border border-border bg-card shadow-[var(--shadow-card)]";
 
-export function OwnerMessages() {
+export function OwnerMessages({ initialStaffId = "" }: { initialStaffId?: string } = {}) {
   const queryClient = useQueryClient();
   const ownerQuery = useQuery(ownerContextOptions);
   const owner = ownerQuery.data;
-  const [selectedStaffId, setSelectedStaffId] = useState("");
+  const [selectedStaffId, setSelectedStaffId] = useState(initialStaffId);
   const [draft, setDraft] = useState("");
 
   const staffQuery = useQuery({
@@ -38,10 +38,10 @@ export function OwnerMessages() {
 
   const staff = staffQuery.data ?? [];
   useEffect(() => {
-    if (!staff.some((person) => person.id === selectedStaffId)) {
+    if (staffQuery.isSuccess && !staff.some((person) => person.id === selectedStaffId)) {
       setSelectedStaffId(staff[0]?.id ?? "");
     }
-  }, [selectedStaffId, staff]);
+  }, [selectedStaffId, staff, staffQuery.isSuccess]);
 
   const recipient = staff.find((person) => person.id === selectedStaffId);
   const recipientProfileId = recipient?.profile_id ?? null;
