@@ -1,3 +1,4 @@
+import { useSubscription } from "./SubscriptionProvider";
 import { useEffect, useState, type FormEvent } from "react";
 import { useQuery, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { ArrowLeft, ArrowRight, Plus } from "lucide-react";
@@ -27,6 +28,7 @@ function londonInstant(date:string,time:string) {
   throw new Error("This time does not exist in Europe/London. Choose another time.");
 }
 export function SchedulingCalendar(){
+ const subscription = useSubscription();
  const {data}=useSuspenseQuery(adminRecordsOptions);
  const owner=useQuery(ownerContextOptions),qc=useQueryClient(),companyId=owner.data?.companyId;
  const [view,setView]=useState<View>("Week"),[anchor,setAnchor]=useState(()=>key(new Date())),[area,setArea]=useState(""),[employee,setEmployee]=useState("");
@@ -51,15 +53,16 @@ export function SchedulingCalendar(){
  const week=Math.ceil(((weekThursday.getTime()-yearStart.getTime())/86400000+1)/7);
  const range=view==="Month"?a.toLocaleDateString("en-GB",{month:"long",year:"numeric",timeZone:"UTC"}):view==="Day"?a.toLocaleDateString("en-GB",{weekday:"long",day:"numeric",month:"short",year:"numeric",timeZone:"UTC"}):"Week "+week+" • "+monday.getUTCDate()+"–"+shift(monday,6).toLocaleDateString("en-GB",{day:"numeric",month:"short",year:"numeric",timeZone:"UTC"});
  function move(n:number){setAnchor(key(view==="Month"?new Date(Date.UTC(a.getUTCFullYear(),a.getUTCMonth()+n,1,12)):shift(a,n*(view==="Day"?1:7))))}
- function create(date=anchor){setEditing(null);setError("");setForm({title:"",date,time:"09:00",client_id:"",staff_id:employee,duration:"",priority:"medium",notes:""});setOpen(true)}
+ async function create(date=anchor){if(!await subscription.requireCapacity("jobs",date))return;setEditing(null);setError("");setForm({title:"",date,time:"09:00",client_id:"",staff_id:employee,duration:"",priority:"medium",notes:""});setOpen(true)}
  function edit(j:Job){setEditing(j.id);setError("");setForm({title:j.title,date:key(new Date(j.scheduled_date)),time:new Date(j.scheduled_date).toLocaleTimeString("en-GB",{timeZone:"Europe/London",hour:"2-digit",minute:"2-digit",hourCycle:"h23"}),client_id:j.client_id??"",staff_id:j.staff_id??"",duration:j.duration_minutes===null?"":String(j.duration_minutes),priority:j.priority,notes:j.notes??""});setOpen(true)}
  async function save(e:FormEvent){e.preventDefault();if(!companyId||busy)return;setBusy(true);setError("");try{
  const payload={title:form.title.trim(),client_id:form.client_id||null,staff_id:form.staff_id||null,scheduled_date:londonInstant(form.date,form.time),duration_minutes:form.duration?Number(form.duration):null,priority:form.priority,notes:form.notes.trim()||null};
+ if(!editing&&!await subscription.requireCapacity("jobs",form.date))return;
  if(!payload.title)throw new Error("Enter a shift title.");
  const r=editing?await supabase.from("jobs").update(payload).eq("company_id",companyId).eq("id",editing).select("id").single():await supabase.from("jobs").insert({...payload,company_id:companyId,status:"scheduled"}).select("id").single();
  if(r.error)throw r.error;await refresh();setOpen(false);toast.success(editing?"Shift updated":"Shift created");
- }catch(e){setError(e instanceof Error?e.message:String((e as {message?:string}).message??"Couldn't save shift."))}finally{setBusy(false)}}
- async function remove(){if(!editing||!companyId||busy||!window.confirm("Delete this shift? This cannot be undone."))return;setBusy(true);try{const r=await supabase.from("jobs").delete().eq("company_id",companyId).eq("id",editing).select("id").single();if(r.error)throw r.error;await refresh();setOpen(false);toast.success("Shift deleted")}catch(e){setError((e as {message?:string}).message??"Couldn't delete shift.")}finally{setBusy(false)}}
+ }catch(e){subscription.handleError(e);setError(e instanceof Error?e.message:String((e as {message?:string}).message??"Couldn't save shift."))}finally{setBusy(false)}}
+ async function remove(){if(!editing||!companyId||busy||!window.confirm("Delete this shift? This cannot be undone."))return;setBusy(true);try{const r=await supabase.from("jobs").delete().eq("company_id",companyId).eq("id",editing).select("id").single();if(r.error)throw r.error;await refresh();setOpen(false);toast.success("Shift deleted")}catch(e){subscription.handleError(e);setError((e as {message?:string}).message??"Couldn't delete shift.")}finally{setBusy(false)}}
  const card=(j:Job)=><button key={j.id} onClick={()=>edit(j)} className="block w-full rounded-2xl border border-slate-200 bg-white p-4 text-left shadow-sm transition hover:border-blue-400 focus-visible:outline-blue-600"><div className="truncate text-sm font-bold">{j.clients?.name??j.title}</div><div className="mt-1 text-sm text-slate-600">{j.title}{j.duration_minutes!==null?" • "+Number((j.duration_minutes/60).toFixed(2))+"h":""}</div><div className="mt-3 flex items-center gap-2"><span className="grid size-7 shrink-0 place-items-center rounded-full bg-slate-950 text-[10px] font-semibold text-white">{initials(j.staff?.name??"?")}</span><span className="truncate text-xs text-slate-600">{j.staff?.name??"Unassigned"}</span></div></button>;
  return <div className="space-y-6 text-slate-950">
  <header className="flex flex-wrap items-center justify-between gap-4"><h1 className="text-[32px] font-bold tracking-tight">Scheduling</h1><div className="flex flex-wrap items-center gap-1">{(["Day","Week","Month","List"] as View[]).map(v=><button key={v} aria-pressed={view===v} onClick={()=>setView(v)} className={"rounded-xl px-4 py-2.5 text-sm font-semibold "+(view===v?"bg-slate-950 text-white":"hover:bg-slate-100")}>{v}</button>)}<button disabled={!companyId} onClick={()=>create()} className="ml-3 inline-flex items-center gap-2 rounded-2xl bg-blue-600 px-5 py-3 text-sm font-semibold text-white disabled:opacity-50"><Plus className="size-4"/>New shift</button></div></header>

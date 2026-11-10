@@ -1489,6 +1489,9 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      subscription_status: { Args: { target_company: string; target_month?: string }; Returns: Json }
+      request_plan_upgrade: { Args: { target_company: string; requested_plan: string }; Returns: string }
+
       create_demo_collection: {
         Args: {
           gross_pence: number

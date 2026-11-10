@@ -1,3 +1,4 @@
+import { useSubscription } from "./SubscriptionProvider";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useQuery, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { Plus } from "lucide-react";
@@ -8,6 +9,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { ownerContextOptions } from "@/lib/owner-context";
 
 export function AddReportButton() {
+  const subscription = useSubscription();
   const { data: owner } = useSuspenseQuery(ownerContextOptions);
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
@@ -18,7 +20,7 @@ export function AddReportButton() {
   const [error, setError] = useState("");
   async function save(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (busy.current) return;
+    if (busy.current || !subscription.requireFeature("reports")) return;
     if (!title.trim() || !description.trim()) { setError("Enter a title and description."); return; }
     busy.current = true;
     setSaving(true);
@@ -35,7 +37,7 @@ export function AddReportButton() {
     finally { busy.current = false; setSaving(false); }
   }
   return <>
-    <Button className="rounded-xl" onClick={() => { setError(""); setOpen(true); }}><Plus className="size-4" />Add Report</Button>
+    <Button className="rounded-xl" onClick={() => { if (!subscription.requireFeature("reports")) return; setError(""); setOpen(true); }}><Plus className="size-4" />Add Report</Button>
     <Dialog open={open} onOpenChange={value => { if (!saving) setOpen(value); }}>
       <DialogContent><DialogHeader><DialogTitle>Add Report</DialogTitle><DialogDescription>Create a general management report. Record incidents in Safety &amp; Compliance.</DialogDescription></DialogHeader>
         <form className="space-y-4" onSubmit={event => void save(event)}>
@@ -50,7 +52,8 @@ export function AddReportButton() {
 }
 
 export function ReportLists() {
-  return <div className="space-y-6"><ReportList table="incidents" title="Incidents from Safety & Compliance" /><ReportList table="reports" title="All Reports" /></div>;
+  const subscription = useSubscription();
+  return <div className="space-y-6"><ReportList table="incidents" title="Incidents from Safety & Compliance" />{subscription.canUse("reports") ? <ReportList table="reports" title="All Reports" /> : <section className="rounded-xl border border-border p-6"><h2 className="font-serif text-xl">All Reports</h2><p className="my-3 text-sm text-muted-foreground">Management reports are available with Growth and Scale.</p><Button variant="outline" onClick={() => subscription.requireFeature("reports")}>Unlock management reports</Button></section>}</div>;
 }
 
 function ReportList({ table, title }: { table: "incidents" | "reports"; title: string }) {

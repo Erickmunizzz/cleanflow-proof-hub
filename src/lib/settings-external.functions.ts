@@ -12,6 +12,10 @@ export const testSettingsSlack = createServerFn({ method: "POST" })
       .eq("id", context.userId).eq("company_id", data.companyId)
       .eq("role", "owner").eq("is_active", true).maybeSingle();
     if (error || !owner) throw new Error("Only the company owner can test this integration.");
+    const subscription = await context.supabase.rpc("subscription_status", { target_company: data.companyId });
+    if (subscription.error || !subscription.data || typeof subscription.data !== "object" || Array.isArray(subscription.data) || subscription.data["plan"] !== "scale") {
+      throw new Error("PLAN_FEATURE: Upgrade to Scale to use integrations.");
+    }
     let response: Response;
     try {
       response = await fetch(data.webhook, {

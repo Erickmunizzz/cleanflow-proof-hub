@@ -1,3 +1,4 @@
+import { useSubscription } from "./SubscriptionProvider";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { Download, ClipboardCheck, CalendarDays } from "lucide-react";
@@ -21,8 +22,10 @@ export function OperationsSection({ section, label }: { section: string; label: 
 const fmt = (value: string | null) => value ? new Date(value).toLocaleString("en-GB") : "—";
 function SectionContent({ section, label }: { section: string; label: string }) {
   const { data } = useSuspenseQuery(adminRecordsOptions);
+  const subscription = useSubscription();
   const jobs = section === "reports" ? data.jobs.filter(job => job.status === "completed") : section === "checkin" ? data.jobs.filter(job => job.check_in_at || job.status !== "completed") : data.jobs;
   function exportJobs() {
+    if (section === "reports" && !subscription.requireFeature("reports")) return;
     const contents = [["Job", "Customer", "Staff", "Status", "Scheduled", "Check-in", "Check-out", "Notes"], ...jobs.map(j => [j.title, j.clients?.name, j.staff?.name, j.status, j.scheduled_date, j.check_in_at, j.check_out_at, j.notes])].map(row => row.map(csvCell).join(",")).join("\r\n");
     const url = URL.createObjectURL(new Blob([contents], { type: "text/csv;charset=utf-8" }));
     const anchor = document.createElement("a"); anchor.href = url; anchor.download = `cleanflow-${section}.csv`; anchor.click(); URL.revokeObjectURL(url);

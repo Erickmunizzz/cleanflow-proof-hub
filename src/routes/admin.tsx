@@ -1,3 +1,4 @@
+import { SubscriptionProvider } from "@/components/admin/SubscriptionProvider";
 import { useState } from "react";
 import { createFileRoute, Outlet } from "@tanstack/react-router";
 import { AdminSidebar } from "@/components/admin/AdminSidebar";
@@ -22,7 +23,7 @@ function AdminLayout() {
       <div className="min-w-0 flex-1 lg:pl-[260px]">
         <AdminTopbar onToggleMenu={() => setMenuOpen(!menuOpen)} />
         <main className="mx-auto max-w-[1400px] p-4 lg:p-8">
-          <Outlet />
+          <SubscriptionProvider><Outlet /></SubscriptionProvider>
         </main>
       </div>
     </div>

@@ -1,3 +1,4 @@
+import { useSubscription } from "./SubscriptionProvider";
 import { useEffect, useState, type FormEvent, type ReactNode } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowRight, Bell, CalendarDays, Loader2, MessageSquare, Package, Save, Settings, ShieldCheck, Sparkles } from "lucide-react";
@@ -60,6 +61,7 @@ export function SettingsPage() {
   const queryClient = useQueryClient();
   const [draft, setDraft] = useState(createSettingsDraft);
   const [editing, setEditing] = useState<SettingsDraft>(createSettingsDraft);
+  const subscription = useSubscription();
   const [finance, setFinance] = useState<(typeof financeSections)[number]["id"] | null>(null);
   const [active, setActive] = useState<SectionId | null>(null);
   const [saving, setSaving] = useState(false);
@@ -192,7 +194,7 @@ export function SettingsPage() {
         </Button>;
       })}
       {financeSections.map(section => <Button key={section.id} variant="outline" disabled={!companyId}
-        onClick={() => setFinance(section.id)} aria-label={`Configure ${section.title}`}
+        onClick={() => { if (subscription.requireFeature(section.id === "integrations" ? "integrations" : section.id === "wage-rates" ? "payroll" : "recurring")) setFinance(section.id); }} aria-label={`Configure ${section.title}`}
         className="group relative h-auto min-h-[195px] w-full flex-col items-start justify-start gap-0 whitespace-normal rounded-xl border-border bg-card p-5 text-left shadow-none transition-shadow hover:bg-card hover:shadow-card-md">
         <span className="grid size-10 place-items-center rounded-xl border border-border bg-accent text-muted-foreground group-hover:text-primary"><Settings className="size-5" /></span>
         <span className="mt-4 text-[14px] font-semibold">{section.title}</span>

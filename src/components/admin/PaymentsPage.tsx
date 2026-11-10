@@ -1,3 +1,4 @@
+import { useSubscription } from "./SubscriptionProvider";
 import { useState, type FormEvent } from "react";
 import { useMutation, useQuery, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { Link2, Users } from "lucide-react";
@@ -18,6 +19,7 @@ const goCardlessPricing = "https://gocardless.com/pricing/";
 const fca = "https://www.fca.org.uk/firms/payment-services-regulations";
 
 export function PaymentsPage() {
+  const subscription = useSubscription();
   const { data: { companyId } } = useSuspenseQuery(ownerContextOptions);
   const plan = useQuery({
     queryKey: ["payments-plan", companyId],
@@ -27,7 +29,7 @@ export function PaymentsPage() {
       return data.plan;
     },
   });
-  const enabled = plan.data === "scale" && !plan.isError;
+  const enabled = subscription.canUse("payments");
   return <main className="space-y-5">
     <header className="flex flex-wrap items-start justify-between gap-3">
       <div><h1 className="text-[28px] font-bold">Payments</h1>
@@ -69,6 +71,7 @@ export function PaymentsPage() {
 }
 
 function CollectFromClient({ companyId, enabled, checking }: { companyId: string; enabled: boolean; checking: boolean }) {
+  const subscription = useSubscription();
   const [customer, setCustomer] = useState("");
   const [amount, setAmount] = useState("");
   const [provider, setProvider] = useState("stripe");
@@ -122,7 +125,8 @@ function CollectFromClient({ companyId, enabled, checking }: { companyId: string
           ["You receive", valid ? gross - gateway - platform : 0]].map(([label, value]) =>
           <div key={label} className="flex justify-between gap-3"><dt>{label}</dt><dd className="shrink-0 font-semibold tabular-nums">{valid ? money(Number(value)) : "—"}</dd></div>)}
       </dl>
-      <Button type="submit" className="w-full whitespace-normal" disabled={!enabled || !valid || !customer || create.isPending}>
+      <Button type={enabled ? "submit" : "button"} className="w-full whitespace-normal" disabled={checking || (enabled && (!valid || !customer || create.isPending))}
+        onClick={() => { if (!enabled) subscription.requireFeature("payments"); }}>
         {checking ? "Checking plan…" : !enabled ? lockedText : create.isPending ? "Generating…" : "Generate Stripe or GoCardless Link + QR"}
       </Button>
       {create.error && <p role="alert" className="text-sm text-destructive">{create.error.message}</p>}
@@ -148,6 +152,7 @@ function monthRange(month: string) {
 }
 
 function PayTeam({ companyId, enabled }: { companyId: string; enabled: boolean }) {
+  const subscription = useSubscription();
   const client = useQueryClient();
   const [month, setMonth] = useState(() => londonMonth.format(new Date()));
   const [page, setPage] = useState(0);
@@ -217,8 +222,8 @@ function PayTeam({ companyId, enabled }: { companyId: string; enabled: boolean }
     <div className="flex items-center justify-between gap-3 border-t border-border pt-3 text-sm">
       <span>Total payout · {selectedJobs.length} selected</span><strong>{money(total)}</strong>
     </div>
-    <Button type="button" className="w-full" disabled={!enabled || !total || payout.isPending} onClick={() => payout.mutate()}>
-      {payout.isPending ? "Recording demo payout…" : `Pay ${money(total)}`}
+    <Button type="button" className="w-full" disabled={enabled && (!total || payout.isPending)} onClick={() => { if (subscription.requireFeature("payments")) payout.mutate(); }}>
+      {!enabled ? lockedText : payout.isPending ? "Recording demo payout…" : `Pay ${money(total)}`}
     </Button>
     {!enabled && <p className="text-xs text-muted-foreground">{lockedText}</p>}
     {payout.error && <p role="alert" className="text-sm text-destructive">{payout.error.message}</p>}

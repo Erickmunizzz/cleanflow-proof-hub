@@ -1,3 +1,5 @@
+import { LIMIT_MESSAGE } from "@/lib/subscriptions";
+import { useSubscription } from "./SubscriptionProvider";
 import { useState, type ReactNode } from "react";
 import { useMutation, useQuery, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
@@ -34,6 +36,7 @@ export function RecordsPage(props: RecordsProps) {
 }
 
 function RecordsContent({ kind, search, onSearch, archived, navigation }: RecordsProps) {
+  const subscription = useSubscription();
   const { data } = useSuspenseQuery(adminRecordsOptions);
   const queryClient = useQueryClient();
   const addCustomerFn = useServerFn(addCustomer);
@@ -87,6 +90,7 @@ function RecordsContent({ kind, search, onSearch, archived, navigation }: Record
           : addCustomerFn({ data: payload });
       }
       if (kind === "staff") {
+        if (!editingId && !await subscription.requireCapacity("staff")) throw new Error(LIMIT_MESSAGE);
         const payload = { name, email, phone, role: form["role"] ?? "", weekly_hours: form["weekly_hours"] ? Number(form["weekly_hours"]) : null, profile_id: form["profile_id"] ?? "" };
         return editingId
           ? updateStaffFn({ data: { id: editingId, data: payload } })
@@ -121,7 +125,8 @@ function RecordsContent({ kind, search, onSearch, archived, navigation }: Record
     onError: (error: Error) => toast.error(error.message),
   });
 
-  function startCreate() {
+  async function startCreate() {
+    if (kind === "staff" && !await subscription.requireCapacity("staff")) return;
     setEditingId(null);
     setForm({});
     save.reset();

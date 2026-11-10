@@ -1,3 +1,5 @@
+import { LIMIT_MESSAGE } from "@/lib/subscriptions";
+import { useSubscription } from "@/components/admin/SubscriptionProvider";
 import { useEffect, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -59,6 +61,7 @@ function JobsPage() {
 
 function JobsBoard() {
   const { status } = Route.useSearch();
+  const subscription = useSubscription();
   const qc = useQueryClient();
   const [open, setOpen] = useState(false);
   const ownerContextQ = useQuery(ownerContextOptions);
@@ -201,6 +204,7 @@ function JobsBoard() {
 }
 
 function AddJobDialog({ open, onOpenChange, companyId }: { open: boolean; onOpenChange: (v: boolean) => void; companyId: string }) {
+  const subscription = useSubscription();
   const qc = useQueryClient();
   const [form, setForm] = useState({ title: "", client_id: "", staff_id: "", scheduled_date: "", notes: "" });
 
@@ -220,6 +224,8 @@ function AddJobDialog({ open, onOpenChange, companyId }: { open: boolean; onOpen
     mutationFn: async () => {
       const scheduled = new Date(form.scheduled_date);
       if (!Number.isFinite(scheduled.getTime())) throw new Error("Enter a valid scheduled date.");
+      const month = new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/London", year: "numeric", month: "2-digit", day: "2-digit" }).format(scheduled);
+      if (!await subscription.requireCapacity("jobs", month)) throw new Error(LIMIT_MESSAGE);
       const { error } = await supabase.from("jobs").insert({
         company_id: companyId,
         title: form.title,
