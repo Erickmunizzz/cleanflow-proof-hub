@@ -297,6 +297,30 @@ function Overview() {
           );
         })}
         {companyId && <OverviewMetrics companyId={companyId} />}
+        <article className="flex min-w-0 flex-col gap-4 rounded-2xl bg-linear-to-br from-blue-950 to-blue-800 p-6 text-white shadow-card">
+          <p className="text-xs font-semibold uppercase tracking-wider text-blue-200">New feature · Stripe &amp; GoCardless</p>
+          <h2 className="text-xl font-bold leading-tight">Collect from clients. Pay your team.</h2>
+          <p className="text-sm leading-relaxed text-blue-100">
+            Try payment links with QR codes and simulated team payouts. The demo includes a 1% CleanFlow fee plus an illustrative gateway fee.
+          </p>
+          <dl className="space-y-2 text-sm">
+            <div className="flex justify-between gap-3 rounded-xl bg-white/10 px-4 py-3">
+              <dt>Client pays (example)</dt>
+              <dd className="font-semibold tabular-nums">£250.00</dd>
+            </div>
+            <div className="flex justify-between gap-3 rounded-xl bg-white/10 px-4 py-3">
+              <dt>You receive (demo)</dt>
+              <dd className="font-semibold tabular-nums text-emerald-300">£243.55</dd>
+            </div>
+          </dl>
+          <Link
+            to="/admin/$section"
+            params={{ section: "payments" }}
+            className="mt-auto flex min-h-11 items-center justify-center gap-2 rounded-xl bg-white px-4 py-2 text-sm font-semibold text-blue-950 transition hover:bg-blue-100 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white"
+          >
+            Open Payments <ArrowRight className="size-4" aria-hidden="true" />
+          </Link>
+        </article>
       </section>
 
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
