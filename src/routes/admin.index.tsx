@@ -303,16 +303,6 @@ function Overview() {
           <p className="text-sm leading-relaxed text-blue-100">
             Try payment links with QR codes and simulated team payouts. The demo includes a 1% CleanFlow fee plus an illustrative gateway fee.
           </p>
-          <dl className="space-y-2 text-sm">
-            <div className="flex justify-between gap-3 rounded-xl bg-white/10 px-4 py-3">
-              <dt>Client pays (example)</dt>
-              <dd className="font-semibold tabular-nums">£250.00</dd>
-            </div>
-            <div className="flex justify-between gap-3 rounded-xl bg-white/10 px-4 py-3">
-              <dt>You receive (demo)</dt>
-              <dd className="font-semibold tabular-nums text-emerald-300">£243.55</dd>
-            </div>
-          </dl>
           <Link
             to="/admin/$section"
             params={{ section: "payments" }}

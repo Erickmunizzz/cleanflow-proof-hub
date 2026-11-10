@@ -3,11 +3,11 @@ import { customerSchema, staffSchema, materialSchema } from "@/lib/admin-records
 import { checklistSummary, recordedHours } from "@/lib/job-summary";
 
 describe("Directory records", () => {
-  it("accepts Test Maria with her specified email", () => {
-    expect(customerSchema.parse({ name: "Test Maria", email: "maria@test.com", phone: "", address: "" })).toEqual({ name: "Test Maria", email: "maria@test.com", phone: null, address: null });
+  it("accepts a customer with an email", () => {
+    expect(customerSchema.parse({ name: "Oak Office", email: "office@example.invalid", phone: "", address: "" })).toEqual({ name: "Oak Office", email: "office@example.invalid", phone: null, address: null });
   });
-  it("accepts Test Joao with the Cleaner role", () => {
-    expect(staffSchema.parse({ name: "Test Joao", role: "Cleaner", email: "", phone: "" }).role).toBe("Cleaner");
+  it("accepts a staff member with the Cleaner role", () => {
+    expect(staffSchema.parse({ name: "Alex Morgan", role: "Cleaner", email: "", phone: "" }).role).toBe("Cleaner");
   });
   it("preserves a numeric material quantity and unit", () => {
     expect(materialSchema.parse({ name: "Floor cleaner", quantity: 2.5, unit: "litres" })).toEqual({ name: "Floor cleaner", quantity: 2.5, unit: "litres" });
