@@ -35,7 +35,7 @@ export function AdminSidebar({ open, onNavigate }: { open: boolean; onNavigate: 
       <div className="flex h-16 shrink-0 items-center gap-3 border-b border-border px-5">
         <img src="/cleanma-logo.png" alt="CleanMa logo" className="h-8 w-12 shrink-0 rounded object-contain" />
         <div>
-          <div className="text-[15px] font-bold leading-none tracking-tight">CleanMA UK</div>
+          <div className="text-[15px] font-bold leading-none tracking-tight">CleanMa</div>
           <div className="mt-0.5 text-[11px] font-medium text-muted-foreground">Modern Cleaning Ops</div>
         </div>
       </div>

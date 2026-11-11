@@ -1,6 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 // Public project credentials only. Owner and Cleaner use the same Auth and database.
-export const db=createClient('https://eymkowczlmbrfxlxcwdm.supabase.co','sb_publishable_MQz1s2hIcpM-w83-akFCPA_TJDDgYjG',{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});
+export const db=createClient(CLEANER_SUPABASE_URL,CLEANER_SUPABASE_KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});
 export const dayKey=d=>new Intl.DateTimeFormat('en-CA',{timeZone:'Europe/London'}).format(new Date(d));
 export function gps(){return new Promise((resolve,reject)=>{
  if(!window.isSecureContext)return reject(Error('Location requires HTTPS. Open the secure app URL.'));

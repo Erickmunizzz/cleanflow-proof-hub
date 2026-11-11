@@ -1,3 +1,4 @@
+import brandLogo from '../../public/cleanma-logo.png';
 import {dayKey} from './supabase.js';
 import {useCleaner} from './use-cleaner.js';
 import {createPanels} from './panels.js';
@@ -7388,12 +7389,7 @@ function xo() {
           className: "h-[56px] shrink-0 flex items-center justify-between px-4 pt-2 bg-white border-b border-slate-100 sticky top-0 z-20",
           children: [p("div", {
             className: "flex items-center gap-2",
-            children: [f("div", {
-              className: "w-8 h-8 rounded-xl bg-[#2563EB] grid place-items-center",
-              children: f(xn, {
-                className: "w-4 h-4 text-white"
-              })
-            }), f("span", {
+            children: [f("img", {src:brandLogo,alt:"CleanMa logo",className:"w-8 h-8 rounded-xl object-contain"}), f("span", {
               className: "font-extrabold tracking-tight text-[15px]",
               children: "CleanMa"
             }), p("span", {
