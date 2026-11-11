@@ -3237,3 +3237,5 @@ summary {
     grid-template-columns: 1fr 300px;
   }
 }
+/* Mobile interaction and safe-area polish, without changing the original layout. */
+button,a,input,select,textarea{touch-action:manipulation}button:focus-visible,a:focus-visible{outline:3px solid #2563eb;outline-offset:3px}[role=dialog]>div,[role=dialog]>form{max-height:90dvh;overflow-y:auto;padding-bottom:max(1.5rem,env(safe-area-inset-bottom))}input,select,textarea{font-size:16px}button:disabled{cursor:wait;opacity:.55}[role=status]{overflow-wrap:anywhere}

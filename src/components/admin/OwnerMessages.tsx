@@ -49,6 +49,8 @@ export function OwnerMessages({ initialStaffId = "" }: { initialStaffId?: string
   const conversationQuery = useQuery({
     queryKey: ["messages", owner?.companyId, owner?.ownerId, recipientProfileId],
     enabled: Boolean(owner && recipientProfileId),
+    refetchInterval: 10000,
+    refetchOnWindowFocus: true,
     queryFn: async () => {
       if (!owner || !recipientProfileId) return [];
       const data = await readAllRows((a, b) => supabase

@@ -1,3 +1,4 @@
+import {dayKey} from './supabase.js';
 import {useCleaner} from './use-cleaner.js';
 import {createPanels} from './panels.js';
 var nd = Object.create;
@@ -7253,7 +7254,7 @@ function xo() {
       let J = Jr.find(Ye => Ye.id === L);
       return m + (J?.pay || 0);
     }, 0),
-    Vt = Jr.filter(j => j.scheduled_date.slice(0, 10) === live.today),
+    Vt = Jr.filter(j => dayKey(j.scheduled_date) === live.today),
     Mv = Vt.find(m => m.status === "NEXT" || m.status === "IN_PROGRESS") || Vt[0];
   return null, p("div", {
     className: "min-h-screen bg-[#EEF2FF] text-slate-900 antialiased selection:bg-blue-600 selection:text-white overflow-x-clip",
@@ -7767,7 +7768,7 @@ function xo() {
                     children: [f($e, {
                       className: "w-5 h-5"
                     }), " CHECK-OUT & Finish"]
-                  }), Jn(O.id) < jn(O) && p("div", {
+                  }), f("button", {onClick:()=>live.nfc(O.id,"completed"),disabled:live.busy||Jn(O.id)<jn(O),className:"w-full h-12 rounded-2xl border border-slate-200 text-sm",children:"NFC check-out (optional)"}), Jn(O.id) < jn(O) && p("div", {
                     className: "text-center text-[11px] text-slate-500",
                     children: ["Complete all ", jn(O), " tasks to check-out"]
                   })]
