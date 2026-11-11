@@ -17,8 +17,7 @@ import { cancelledJobStatuses } from "@/lib/overview-metrics";
 import { readAllRows } from "@/lib/supabase-pages";
 
 export const Route = createFileRoute("/admin/jobs")({
-  validateSearch: (search: Record<string, unknown>): { status?: "cancelled" } =>
-    search["status"] === "cancelled" ? { status: "cancelled" } : {},
+  validateSearch: (search: Record<string, unknown>): { status?: "cancelled" | undefined; job?: string | undefined } => ({ status: search["status"] === "cancelled" ? "cancelled" : undefined, job: typeof search["job"] === "string" ? search["job"] : undefined }),
   head: () => ({
     meta: [
       { title: "Jobs — CleanMa" },
@@ -60,7 +59,7 @@ function JobsPage() {
 }
 
 function JobsBoard() {
-  const { status } = Route.useSearch();
+  const { status, job: selectedJob } = Route.useSearch();
   const subscription = useSubscription();
   const qc = useQueryClient();
   const [open, setOpen] = useState(false);
@@ -105,7 +104,7 @@ function JobsBoard() {
   if (ownerContextQ.isLoading) return <div className="text-[13px] text-muted-foreground">Loading owner workspace…</div>;
   if (ownerContextQ.isError || !companyId) return <div role="alert" className="space-y-4"><h1 className="text-[28px] font-bold">Jobs</h1><p className="text-sm text-danger">{ownerContextQ.error?.message ?? "Your workspace is unavailable."}</p><Button onClick={() => void ownerContextQ.refetch()}>Try again</Button></div>;
 
-  const jobs = (jobsQ.data ?? []).filter(job => !status || cancelledJobStatuses.includes(job.status));
+  const jobs = (jobsQ.data ?? []).filter(job => (!status || cancelledJobStatuses.includes(job.status)) && (!selectedJob || job.id === selectedJob));
 
   return (
     <div className="space-y-6">
