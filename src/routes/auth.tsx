@@ -1,7 +1,6 @@
 import { AuthLegalFooter } from "@/components/legal/LegalDocuments";
 import { useState } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { Zap } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -45,9 +44,7 @@ function AuthPage() {
     <div className="flex min-h-screen items-center justify-center bg-background p-4">
       <form onSubmit={submit} className="w-full max-w-sm space-y-4 rounded-2xl border border-border bg-card p-6 shadow-[var(--shadow-card)]">
         <div className="flex items-center gap-3">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
-            <Zap className="h-5 w-5 text-primary-foreground" />
-          </div>
+          <img src="/cleanma-logo.png" alt="CleanMa logo" className="h-8 w-12 shrink-0 rounded object-contain" />
           <div className="text-[17px] font-bold tracking-tight">{mode === "signin" ? "Sign in" : "Create account"}</div>
         </div>
         <input className={input} type="email" required placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} />

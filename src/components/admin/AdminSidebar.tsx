@@ -1,6 +1,6 @@
 import { Link, useLocation, useNavigate } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
-import { LogOut, Zap } from "lucide-react";
+import { LogOut } from "lucide-react";
 import { toast } from "sonner";
 import { adminNav } from "@/lib/admin-nav";
 import { cn } from "@/lib/utils";
@@ -33,9 +33,7 @@ export function AdminSidebar({ open, onNavigate }: { open: boolean; onNavigate: 
       )}
     >
       <div className="flex h-16 shrink-0 items-center gap-3 border-b border-border px-5">
-        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
-          <Zap className="h-5 w-5 text-primary-foreground" />
-        </div>
+        <img src="/cleanma-logo.png" alt="CleanMa logo" className="h-8 w-12 shrink-0 rounded object-contain" />
         <div>
           <div className="text-[15px] font-bold leading-none tracking-tight">CleanMa UK</div>
           <div className="mt-0.5 text-[11px] font-medium text-muted-foreground">Modern Cleaning Ops</div>
