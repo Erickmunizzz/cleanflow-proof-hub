@@ -6,9 +6,9 @@ import { AdminRecordsError } from "@/components/admin/AdminRecordsError";
 export const Route = createFileRoute("/admin/$section")({
   head: ({ params }) => ({
     meta: [
-      { title: `${findAdminNavItem(params.section)?.label ?? "Unavailable"} — Cleanma UK` },
-      { name: "description", content: "Cleanma UK admin workspace for commercial cleaning operations." },
-      { property: "og:title", content: `${findAdminNavItem(params.section)?.label ?? "Unavailable"} — Cleanma UK` },
+      { title: `${findAdminNavItem(params.section)?.label ?? "Unavailable"} — CleanMa` },
+      { name: "description", content: "CleanMa admin workspace for commercial cleaning operations." },
+      { property: "og:title", content: `${findAdminNavItem(params.section)?.label ?? "Unavailable"} — CleanMa` },
       { property: "og:description", content: `Cleaning operations: ${findAdminNavItem(params.section)?.label ?? "Unavailable"}.` },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },

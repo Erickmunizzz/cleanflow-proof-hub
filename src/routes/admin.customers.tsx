@@ -4,10 +4,10 @@ import { AdminRecordsError } from "@/components/admin/AdminRecordsError";
 export const Route = createFileRoute("/admin/customers")({
   validateSearch: (search: Record<string, unknown>) => ({ q: typeof search['q'] === "string" ? search['q'] : "" }),
   head: () => ({ meta: [
-    { title: "Customers — Cleanma UK" },
-    { name: "description", content: "Customers records in your Cleanma UK workspace." },
-    { property: "og:title", content: "Customers — Cleanma UK" },
-    { property: "og:description", content: "Customers records in your Cleanma UK workspace." },
+    { title: "Customers — CleanMa" },
+    { name: "description", content: "Customers records in your CleanMa workspace." },
+    { property: "og:title", content: "Customers — CleanMa" },
+    { property: "og:description", content: "Customers records in your CleanMa workspace." },
     { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" },
   ] }),
   component: Page,

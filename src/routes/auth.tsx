@@ -7,10 +7,10 @@ import { supabase } from "@/integrations/supabase/client";
 export const Route = createFileRoute("/auth")({
   head: () => ({
     meta: [
-      { title: "Sign in — Cleanma UK" },
-      { name: "description", content: "Sign in to your Cleanma UK workspace." },
-      { property: "og:title", content: "Sign in — Cleanma UK" },
-      { property: "og:description", content: "Sign in to your Cleanma UK workspace." },
+      { title: "Sign in — CleanMa" },
+      { name: "description", content: "Sign in to your CleanMa workspace." },
+      { property: "og:title", content: "Sign in — CleanMa" },
+      { property: "og:description", content: "Sign in to your CleanMa workspace." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
     ],

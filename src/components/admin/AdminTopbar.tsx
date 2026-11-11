@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { CircleHelp, LogOut, Menu, Search } from "lucide-react";
+import { GlobalSearch } from "./GlobalSearch";
+import { CircleHelp, LogOut, Menu } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { NotificationBell } from "./NotificationBell";
@@ -7,7 +7,6 @@ import { useAdminAccount } from "./AdminSession";
 import { Button } from "@/components/ui/button";
 
 export function AdminTopbar({ onToggleMenu }: { onToggleMenu: () => void }) {
-  const [query, setQuery] = useState("");
   const account = useAdminAccount();
 
   const signOut = async () => {
@@ -31,23 +30,13 @@ export function AdminTopbar({ onToggleMenu }: { onToggleMenu: () => void }) {
       <Button variant="ghost" size="icon" onClick={onToggleMenu} className="-ml-2 shrink-0 rounded-xl p-2 hover:bg-secondary lg:hidden" aria-label="Open menu">
         <Menu className="h-5 w-5" />
       </Button>
-      <div className="flex min-w-0 max-w-[640px] flex-1 items-center gap-3">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <input
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search customers, tasks, inventory..."
-            className="h-10 w-full rounded-xl border border-transparent bg-surface-2 pl-10 pr-4 text-[13.5px] outline-none transition focus:border-primary focus:bg-card"
-          />
-        </div>
-      </div>
+      <GlobalSearch />
 
       <div className="flex shrink-0 items-center gap-1">
         <a
           href="mailto:support@cleanmaapp.com?subject=Suporte%20CleanMa%20UK"
           title="Email support — support@cleanmaapp.com"
-          aria-label="Email CleanMa UK support"
+          aria-label="Email CleanMa support"
           className="grid h-9 w-9 place-items-center rounded-xl text-muted-foreground transition hover:bg-secondary"
         >
           <CircleHelp className="h-5 w-5" />

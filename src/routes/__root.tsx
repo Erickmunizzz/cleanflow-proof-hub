@@ -81,9 +81,9 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Cleanma UK" },
+      { title: "CleanMa" },
       { name: "description", content: "Operations and proof-of-service platform for UK commercial cleaning companies." },
-      { property: "og:title", content: "Cleanma UK" },
+      { property: "og:title", content: "CleanMa" },
       { property: "og:description", content: "Operations and proof-of-service platform for UK commercial cleaning companies." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },

@@ -35,7 +35,7 @@ export function AdminSidebar({ open, onNavigate }: { open: boolean; onNavigate: 
       <div className="flex h-16 shrink-0 items-center gap-3 border-b border-border px-5">
         <img src="/cleanma-logo.png" alt="CleanMa logo" className="h-8 w-12 shrink-0 rounded object-contain" />
         <div>
-          <div className="text-[15px] font-bold leading-none tracking-tight">CleanMa UK</div>
+          <div className="text-[15px] font-bold leading-none tracking-tight">CleanMA UK</div>
           <div className="mt-0.5 text-[11px] font-medium text-muted-foreground">Modern Cleaning Ops</div>
         </div>
       </div>
@@ -84,7 +84,7 @@ export function AdminSidebar({ open, onNavigate }: { open: boolean; onNavigate: 
           <div className="absolute -right-6 -top-6 h-20 w-20 rounded-full bg-ink-foreground/10 blur-xl" />
           <div className="text-[12px] font-semibold opacity-90">Upgrade to Scale</div>
           <div className="mt-1 text-[11px] leading-snug opacity-60">
-            Get 50 staff seats, API access & priority support.
+            Up to 20 active staff and 1,000 jobs per month.
           </div>
           <Link
             to="/admin/$section"
@@ -101,7 +101,7 @@ export function AdminSidebar({ open, onNavigate }: { open: boolean; onNavigate: 
           </div>
           <div className="min-w-0 flex-1">
             <div className="truncate text-[13px] font-medium leading-none" title={account?.name}>{account?.name || (session === undefined ? "Loading…" : "Signed out")}</div>
-            <div className="text-[11px] text-muted-foreground">{account ? "Workspace account" : "CleanMa UK"}</div>
+            <div className="text-[11px] text-muted-foreground">{account ? "Workspace account" : "CleanMa"}</div>
           </div>
           <div className="grid h-7 w-7 place-items-center rounded-full bg-secondary">
             <div className={cn("h-2 w-2 rounded-full", account ? "bg-success" : "bg-muted-foreground")} />

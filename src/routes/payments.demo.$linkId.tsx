@@ -4,7 +4,7 @@ import { CreditCard } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/payments/demo/$linkId")({
-  head: () => ({ meta: [{ title: "Demo payment · Cleanma UK" }, { name: "robots", content: "noindex,nofollow" }, { name: "referrer", content: "no-referrer" }] }),
+  head: () => ({ meta: [{ title: "Demo payment · CleanMa" }, { name: "robots", content: "noindex,nofollow" }, { name: "referrer", content: "no-referrer" }] }),
   component: DemoCheckout,
 });
 
@@ -23,7 +23,7 @@ function DemoCheckout() {
   return <main className="grid min-h-dvh place-items-center bg-surface-2 p-4">
     <section className="w-full max-w-md space-y-3 rounded-2xl border border-border bg-card p-6 text-center shadow-card">
       <CreditCard className="mx-auto size-8 text-primary" />
-      <p className="text-sm font-semibold text-primary">Cleanma UK</p>
+      <p className="text-sm font-semibold text-primary">CleanMa</p>
       <h1 className="text-2xl font-bold">Demo payment</h1>
       {!valid ? <p>Demo link not found.</p> : checkout.isPending ? <p role="status">Loading demo…</p> :
         checkout.error ? <p role="alert">The demo could not be loaded.</p> : checkout.data ? <>

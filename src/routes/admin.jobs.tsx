@@ -21,9 +21,9 @@ export const Route = createFileRoute("/admin/jobs")({
     search["status"] === "cancelled" ? { status: "cancelled" } : {},
   head: () => ({
     meta: [
-      { title: "Jobs — Cleanma UK" },
+      { title: "Jobs — CleanMa" },
       { name: "description", content: "Live job schedule with check-in, check-out and checklists." },
-      { property: "og:title", content: "Jobs — Cleanma UK" },
+      { property: "og:title", content: "Jobs — CleanMa" },
       { property: "og:description", content: "Live job schedule with check-in, check-out and checklists." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
