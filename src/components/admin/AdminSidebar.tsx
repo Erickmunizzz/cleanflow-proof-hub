@@ -37,7 +37,7 @@ export function AdminSidebar({ open, onNavigate }: { open: boolean; onNavigate: 
           <Zap className="h-5 w-5 text-primary-foreground" />
         </div>
         <div>
-          <div className="text-[15px] font-bold leading-none tracking-tight">CleanFlow UK</div>
+          <div className="text-[15px] font-bold leading-none tracking-tight">Cleanma UK</div>
           <div className="mt-0.5 text-[11px] font-medium text-muted-foreground">Modern Cleaning Ops</div>
         </div>
       </div>
@@ -103,7 +103,7 @@ export function AdminSidebar({ open, onNavigate }: { open: boolean; onNavigate: 
           </div>
           <div className="min-w-0 flex-1">
             <div className="truncate text-[13px] font-medium leading-none" title={account?.name}>{account?.name || (session === undefined ? "Loading…" : "Signed out")}</div>
-            <div className="text-[11px] text-muted-foreground">{account ? "Workspace account" : "CleanFlow UK"}</div>
+            <div className="text-[11px] text-muted-foreground">{account ? "Workspace account" : "Cleanma UK"}</div>
           </div>
           <div className="grid h-7 w-7 place-items-center rounded-full bg-secondary">
             <div className={cn("h-2 w-2 rounded-full", account ? "bg-success" : "bg-muted-foreground")} />

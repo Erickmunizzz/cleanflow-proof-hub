@@ -1,3 +1,4 @@
+import { LegalSettingsCard } from "@/components/legal/LegalDocuments";
 import { useSubscription } from "./SubscriptionProvider";
 import { useEffect, useState, type FormEvent, type ReactNode } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -202,6 +203,7 @@ export function SettingsPage() {
         <span className="mt-auto flex items-center gap-1 pt-4 text-[12px] font-medium text-primary">Configure <ArrowRight className="size-3.5" /></span>
       </Button>)}
     </div>
+    <LegalSettingsCard />
     {finance && companyId && <ScopedFinanceSettings section={finance} companyId={companyId} close={() => setFinance(null)} />}
     <Dialog open={active !== null} onOpenChange={value => { if (!value) setActive(null); }}>
       <DialogContent className="max-h-[85dvh] w-[calc(100%-2rem)] max-w-[640px] overflow-y-auto rounded-xl bg-card p-5 sm:p-6">

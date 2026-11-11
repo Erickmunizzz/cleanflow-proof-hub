@@ -28,7 +28,7 @@ function SectionContent({ section, label }: { section: string; label: string }) 
     if (section === "reports" && !subscription.requireFeature("reports")) return;
     const contents = [["Job", "Customer", "Staff", "Status", "Scheduled", "Check-in", "Check-out", "Notes"], ...jobs.map(j => [j.title, j.clients?.name, j.staff?.name, j.status, j.scheduled_date, j.check_in_at, j.check_out_at, j.notes])].map(row => row.map(csvCell).join(",")).join("\r\n");
     const url = URL.createObjectURL(new Blob([contents], { type: "text/csv;charset=utf-8" }));
-    const anchor = document.createElement("a"); anchor.href = url; anchor.download = `cleanflow-${section}.csv`; anchor.click(); URL.revokeObjectURL(url);
+    const anchor = document.createElement("a"); anchor.href = url; anchor.download = `cleanma-${section}.csv`; anchor.click(); URL.revokeObjectURL(url);
   }
   return <div className="space-y-6">
     <div className="flex flex-wrap items-center justify-between gap-3"><h1 className="text-[28px] font-bold">{label}</h1><div className="flex flex-wrap gap-2">{section === "reports" && <AddReportButton />}<Button asChild variant="outline" className="rounded-xl"><Link to="/admin/jobs"><CalendarDays />Jobs</Link></Button>{!["keys", "messages", "settings"].includes(section) && <Button onClick={exportJobs} variant="outline" className="rounded-xl"><Download />Export jobs</Button>}</div></div>

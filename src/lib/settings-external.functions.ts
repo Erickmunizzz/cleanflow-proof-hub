@@ -23,7 +23,7 @@ export const testSettingsSlack = createServerFn({ method: "POST" })
         redirect: "error",
         signal: AbortSignal.timeout(8000),
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text: "CleanFlow UK · Slack integration test" }),
+        body: JSON.stringify({ text: "Cleanma UK · Slack integration test" }),
       });
     } catch {
       throw new Error("Slack could not be reached. Check the webhook and try again.");

@@ -16,9 +16,9 @@ import { readAllRows } from "@/lib/supabase-pages";
 export const Route = createFileRoute("/admin/")({
   head: () => ({
     meta: [
-      { title: "Operations Overview — CleanFlow UK" },
+      { title: "Operations Overview — Cleanma UK" },
       { name: "description", content: "Live overview of jobs, check-ins and site operations for your cleaning team." },
-      { property: "og:title", content: "Operations Overview — CleanFlow UK" },
+      { property: "og:title", content: "Operations Overview — Cleanma UK" },
       { property: "og:description", content: "Live overview of jobs, check-ins and site operations for your cleaning team." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
@@ -105,7 +105,7 @@ function downloadJobs(jobs: Job[]) {
   const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
   const anchor = document.createElement("a");
   anchor.href = url;
-  anchor.download = "cleanflow-jobs.csv";
+  anchor.download = "cleanma-jobs.csv";
   anchor.click();
   URL.revokeObjectURL(url);
 }
@@ -301,7 +301,7 @@ function Overview() {
           <p className="text-xs font-semibold uppercase tracking-wider text-blue-200">New feature · Stripe &amp; GoCardless</p>
           <h2 className="text-xl font-bold leading-tight">Collect from clients. Pay your team.</h2>
           <p className="text-sm leading-relaxed text-blue-100">
-            Try payment links with QR codes and simulated team payouts. The demo includes a 1% CleanFlow fee plus an illustrative gateway fee.
+            Try payment links with QR codes and simulated team payouts. The demo includes a 1% Cleanma fee plus an illustrative gateway fee.
           </p>
           <Link
             to="/admin/$section"

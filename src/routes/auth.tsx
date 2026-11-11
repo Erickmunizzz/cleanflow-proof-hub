@@ -1,3 +1,4 @@
+import { AuthLegalFooter } from "@/components/legal/LegalDocuments";
 import { useState } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { Zap } from "lucide-react";
@@ -7,10 +8,10 @@ import { supabase } from "@/integrations/supabase/client";
 export const Route = createFileRoute("/auth")({
   head: () => ({
     meta: [
-      { title: "Sign in — CleanFlow UK" },
-      { name: "description", content: "Sign in to your CleanFlow UK workspace." },
-      { property: "og:title", content: "Sign in — CleanFlow UK" },
-      { property: "og:description", content: "Sign in to your CleanFlow UK workspace." },
+      { title: "Sign in — Cleanma UK" },
+      { name: "description", content: "Sign in to your Cleanma UK workspace." },
+      { property: "og:title", content: "Sign in — Cleanma UK" },
+      { property: "og:description", content: "Sign in to your Cleanma UK workspace." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
     ],
@@ -57,6 +58,7 @@ function AuthPage() {
         <button type="button" onClick={() => setMode(mode === "signin" ? "signup" : "signin")} className="w-full text-[12.5px] text-muted-foreground hover:text-foreground">
           {mode === "signin" ? "No account yet? Create one" : "Already have an account? Sign in"}
         </button>
+        <AuthLegalFooter />
       </form>
     </div>
   );

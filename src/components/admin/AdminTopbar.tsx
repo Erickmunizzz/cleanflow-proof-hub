@@ -45,8 +45,8 @@ export function AdminTopbar({ onToggleMenu }: { onToggleMenu: () => void }) {
 
       <div className="flex items-center gap-1">
         <a
-          href="mailto:support@cleanflow.uk?subject=Support%20CleanFlow%20UK"
-          title="Support - support@cleanflow.uk"
+          href="https://support.cleanmaap.com"
+          title="Support - support.cleanmaap.com"
           className="grid h-9 w-9 place-items-center rounded-xl text-muted-foreground transition hover:bg-secondary"
         >
           <CircleHelp className="h-5 w-5" />

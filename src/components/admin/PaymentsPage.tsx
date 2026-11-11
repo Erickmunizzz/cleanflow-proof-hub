@@ -45,7 +45,7 @@ export function PaymentsPage() {
       <ol className="grid list-inside list-decimal gap-3 text-sm md:grid-cols-2 xl:grid-cols-4">
         <li>Choose a client and enter the amount to collect.</li>
         <li>Generate a demo payment link and its QR code.</li>
-        <li>Review the gateway estimate and the 1% CleanFlow platform fee.</li>
+        <li>Review the gateway estimate and the 1% Cleanma platform fee.</li>
         <li>See the estimated amount you receive after both fees.</li>
       </ol>
     </section>
@@ -63,7 +63,7 @@ export function PaymentsPage() {
           <p className="mt-2 text-sm text-muted-foreground">Follow up with the client and keep the invoice unpaid until receipt is confirmed. A demo link records a simulation and cannot settle an invoice.</p>
         </details>
         <details className="py-3"><summary className="cursor-pointer font-medium">Stripe vs GoCardless fees?</summary>
-          <p className="mt-2 text-sm text-muted-foreground">This demo uses 1.5% + 20p, the Stripe standard UK card benchmark, plus the 1% CleanFlow fee. GoCardless uses bank payments and separate pricing. Check the published <a className="underline" href={stripePricing}>Stripe</a> and <a className="underline" href={goCardlessPricing}>GoCardless</a> rates for live payments.</p>
+          <p className="mt-2 text-sm text-muted-foreground">This demo uses 1.5% + 20p, the Stripe standard UK card benchmark, plus the 1% Cleanma fee. GoCardless uses bank payments and separate pricing. Check the published <a className="underline" href={stripePricing}>Stripe</a> and <a className="underline" href={goCardlessPricing}>GoCardless</a> rates for live payments.</p>
         </details>
       </div>
     </section>
