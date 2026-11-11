@@ -31,7 +31,7 @@ export function AdminTopbar({ onToggleMenu }: { onToggleMenu: () => void }) {
       <Button variant="ghost" size="icon" onClick={onToggleMenu} className="-ml-2 shrink-0 rounded-xl p-2 hover:bg-secondary lg:hidden" aria-label="Open menu">
         <Menu className="h-5 w-5" />
       </Button>
-      <div className="flex max-w-[640px] flex-1 items-center gap-3">
+      <div className="flex min-w-0 max-w-[640px] flex-1 items-center gap-3">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <input
@@ -43,10 +43,11 @@ export function AdminTopbar({ onToggleMenu }: { onToggleMenu: () => void }) {
         </div>
       </div>
 
-      <div className="flex items-center gap-1">
+      <div className="flex shrink-0 items-center gap-1">
         <a
-          href="https://support.cleanmaap.com"
-          title="Support - support.cleanmaap.com"
+          href="mailto:support@cleanmaapp.com?subject=Suporte%20CleanMa%20UK"
+          title="Email support — support@cleanmaapp.com"
+          aria-label="Email CleanMa UK support"
           className="grid h-9 w-9 place-items-center rounded-xl text-muted-foreground transition hover:bg-secondary"
         >
           <CircleHelp className="h-5 w-5" />
