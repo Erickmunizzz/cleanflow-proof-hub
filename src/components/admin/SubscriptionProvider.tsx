@@ -88,7 +88,7 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
   }
   const full = status && (status.staffUsed >= status.staffLimit || status.jobsUsed >= status.jobsLimit);
   const near = status && (status.staffUsed >= status.staffLimit * 0.8 || status.jobsUsed >= status.jobsLimit * 0.8);
-  const rank = status?.plan === "trial" ? -1 : plans.findIndex(plan => plan.id === status?.plan);
+  const rank = plans.findIndex(plan => plan.id === status?.plan);
   return <Context.Provider value={{ canUse: required => Boolean(status && allowsFeature(status.plan, required)), requireFeature, requireCapacity, handleError }}>
     {session && query.isError && <div role="alert" className="mb-5 rounded-xl border border-border p-4 text-sm">Could not verify your subscription. <Button variant="link" onClick={() => void query.refetch()}>Try again</Button></div>}
     {status && near && <aside role="status" className="mb-6 flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-border bg-card p-5 shadow-sm">

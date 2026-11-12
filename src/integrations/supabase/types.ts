@@ -1019,6 +1019,7 @@ export type Database = {
       }
       messages: {
         Row: {
+          sender_name: string | null
           body: string
           company_id: string
           created_at: string
@@ -1029,6 +1030,7 @@ export type Database = {
           sender_id: string
         }
         Insert: {
+          sender_name?: string | null
           body: string
           company_id: string
           created_at?: string
@@ -1039,6 +1041,7 @@ export type Database = {
           sender_id: string
         }
         Update: {
+          sender_name?: string | null
           body?: string
           company_id?: string
           created_at?: string
@@ -1132,6 +1135,7 @@ export type Database = {
       }
       notifications: {
         Row: {
+          sender_name: string | null
           company_id: string
           created_at: string
           created_by: string | null
@@ -1144,6 +1148,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          sender_name?: string | null
           company_id: string
           created_at?: string
           created_by?: string | null
@@ -1156,6 +1161,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          sender_name?: string | null
           company_id?: string
           created_at?: string
           created_by?: string | null
