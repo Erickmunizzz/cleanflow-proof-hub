@@ -22,3 +22,10 @@ export async function readTag(signal) {
   reader.onreading=e=>{const record=e.message.records.find(r=>r.recordType==='text'||r.recordType==='url');if(record)done(resolve,new TextDecoder(record.encoding||'utf-8').decode(record.data).trim());else done(reject,Error('This tag has no supported site code.'));};
  });
 }
+export async function readQr(signal){
+ if(!window.isSecureContext||!navigator.mediaDevices?.getUserMedia||!window.BarcodeDetector)throw Error('QR scanning is unavailable in this browser. Use NFC or GPS check-in.');
+ const formats=await window.BarcodeDetector.getSupportedFormats();if(!formats.includes('qr_code'))throw Error('QR scanning is unavailable. Use NFC or GPS check-in.');
+ const stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'},audio:false});
+ const video=document.createElement('video');video.muted=true;video.playsInline=true;video.srcObject=stream;video.style.cssText='position:fixed;inset:20% 5%;width:90%;height:50%;object-fit:cover;z-index:150;background:black;border-radius:20px';document.body.append(video);
+ try{await video.play();const detector=new window.BarcodeDetector({formats:['qr_code']}),until=Date.now()+20000;while(Date.now()<until){if(signal.aborted)throw Error('Scan cancelled.');const codes=await detector.detect(video);if(codes[0]?.rawValue)return codes[0].rawValue.trim();await new Promise(r=>setTimeout(r,200));}throw Error('No QR code detected. Please try again.');}finally{stream.getTracks().forEach(t=>t.stop());video.remove();}
+}

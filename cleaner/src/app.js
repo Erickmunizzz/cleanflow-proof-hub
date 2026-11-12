@@ -7223,7 +7223,7 @@ function xo() {
     [Nu, bo] = A.useState("EN"),
     [ea, na] = A.useState(!1),
     [Dv, Zc] = [Object.fromEntries(live.jobs.filter(j => j.check_in_at).map(j => [j.id, new Date(j.check_in_at).toLocaleTimeString("en-GB")])), () => {}],
-    [jr] = A.useState("±5m"),
+    [jr] = A.useState("Accuracy depends on device"),
     O = Jr.find(m => m.id === u) || null,
     Be = m => {
       z(m), setTimeout(() => z(null), 3000);
@@ -7787,7 +7787,7 @@ function xo() {
                         children: "GPS"
                       }), f("span", {
                         className: "font-bold text-emerald-700",
-                        children: "OK ±5m • 08:02-10:07"
+                        children: O.check_in_at ? "GPS attendance recorded" : "Not checked in"
                       })]
                     })]
                   }), p("div", {
