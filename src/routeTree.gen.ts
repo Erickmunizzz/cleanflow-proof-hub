@@ -14,6 +14,9 @@ import { Route as AdminRouteImport } from './routes/admin'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as CleanerRouteImport } from './routes/cleaner'
 import { Route as ClientPortalRouteImport } from './routes/client-portal'
+import { Route as FuncionarioRouteImport } from './routes/funcionario'
+import { Route as PlanosRouteImport } from './routes/planos'
+import { Route as SuspendedRouteImport } from './routes/suspended'
 import { Route as AdminIndexRouteImport } from './routes/admin.index'
 import { Route as AdminSectionRouteImport } from './routes/admin.$section'
 import { Route as AdminCustomersRouteImport } from './routes/admin.customers'
@@ -46,6 +49,21 @@ const CleanerRoute = CleanerRouteImport.update({
 const ClientPortalRoute = ClientPortalRouteImport.update({
   id: '/client-portal',
   path: '/client-portal',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const FuncionarioRoute = FuncionarioRouteImport.update({
+  id: '/funcionario',
+  path: '/funcionario',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PlanosRoute = PlanosRouteImport.update({
+  id: '/planos',
+  path: '/planos',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SuspendedRoute = SuspendedRouteImport.update({
+  id: '/suspended',
+  path: '/suspended',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AdminIndexRoute = AdminIndexRouteImport.update({
@@ -95,6 +113,9 @@ export interface FileRoutesByFullPath {
   '/auth': typeof AuthRoute
   '/cleaner': typeof CleanerRoute
   '/client-portal': typeof ClientPortalRoute
+  '/funcionario': typeof FuncionarioRoute
+  '/planos': typeof PlanosRoute
+  '/suspended': typeof SuspendedRoute
   '/admin/$section': typeof AdminSectionRoute
   '/admin/customers': typeof AdminCustomersRoute
   '/admin/employees': typeof AdminEmployeesRoute
@@ -109,6 +130,9 @@ export interface FileRoutesByTo {
   '/auth': typeof AuthRoute
   '/cleaner': typeof CleanerRoute
   '/client-portal': typeof ClientPortalRoute
+  '/funcionario': typeof FuncionarioRoute
+  '/planos': typeof PlanosRoute
+  '/suspended': typeof SuspendedRoute
   '/admin/$section': typeof AdminSectionRoute
   '/admin/customers': typeof AdminCustomersRoute
   '/admin/employees': typeof AdminEmployeesRoute
@@ -125,6 +149,9 @@ export interface FileRoutesById {
   '/auth': typeof AuthRoute
   '/cleaner': typeof CleanerRoute
   '/client-portal': typeof ClientPortalRoute
+  '/funcionario': typeof FuncionarioRoute
+  '/planos': typeof PlanosRoute
+  '/suspended': typeof SuspendedRoute
   '/admin/$section': typeof AdminSectionRoute
   '/admin/customers': typeof AdminCustomersRoute
   '/admin/employees': typeof AdminEmployeesRoute
@@ -142,6 +169,9 @@ export interface FileRouteTypes {
     | '/auth'
     | '/cleaner'
     | '/client-portal'
+    | '/funcionario'
+    | '/planos'
+    | '/suspended'
     | '/admin/$section'
     | '/admin/customers'
     | '/admin/employees'
@@ -156,6 +186,9 @@ export interface FileRouteTypes {
     | '/auth'
     | '/cleaner'
     | '/client-portal'
+    | '/funcionario'
+    | '/planos'
+    | '/suspended'
     | '/admin/$section'
     | '/admin/customers'
     | '/admin/employees'
@@ -171,6 +204,9 @@ export interface FileRouteTypes {
     | '/auth'
     | '/cleaner'
     | '/client-portal'
+    | '/funcionario'
+    | '/planos'
+    | '/suspended'
     | '/admin/$section'
     | '/admin/customers'
     | '/admin/employees'
@@ -187,6 +223,9 @@ export interface RootRouteChildren {
   AuthRoute: typeof AuthRoute
   CleanerRoute: typeof CleanerRoute
   ClientPortalRoute: typeof ClientPortalRoute
+  FuncionarioRoute: typeof FuncionarioRoute
+  PlanosRoute: typeof PlanosRoute
+  SuspendedRoute: typeof SuspendedRoute
   PaymentsDemoLinkIdRoute: typeof PaymentsDemoLinkIdRoute
 }
 
@@ -225,6 +264,27 @@ declare module '@tanstack/react-router' {
       path: '/client-portal'
       fullPath: '/client-portal'
       preLoaderRoute: typeof ClientPortalRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/funcionario': {
+      id: '/funcionario'
+      path: '/funcionario'
+      fullPath: '/funcionario'
+      preLoaderRoute: typeof FuncionarioRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/planos': {
+      id: '/planos'
+      path: '/planos'
+      fullPath: '/planos'
+      preLoaderRoute: typeof PlanosRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/suspended': {
+      id: '/suspended'
+      path: '/suspended'
+      fullPath: '/suspended'
+      preLoaderRoute: typeof SuspendedRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/admin/': {
@@ -314,6 +374,9 @@ const rootRouteChildren: RootRouteChildren = {
   AuthRoute: AuthRoute,
   CleanerRoute: CleanerRoute,
   ClientPortalRoute: ClientPortalRoute,
+  FuncionarioRoute: FuncionarioRoute,
+  PlanosRoute: PlanosRoute,
+  SuspendedRoute: SuspendedRoute,
   PaymentsDemoLinkIdRoute: PaymentsDemoLinkIdRoute,
 }
 export const routeTree = rootRouteImport

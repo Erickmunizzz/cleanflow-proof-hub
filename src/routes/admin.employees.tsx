@@ -1,3 +1,4 @@
+import {InviteEmployee} from "@/components/admin/InviteEmployee";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { AdminDataBoundary } from "@/components/admin/AdminSession";
 import { OwnerMessages } from "@/components/admin/OwnerMessages";
@@ -33,13 +34,13 @@ function Page() {
   const { q, tab, employee } = Route.useSearch();
   const navigate = Route.useNavigate();
   const navigation = (
-    <nav aria-label="Employee sections" className="flex flex-wrap gap-2">
+    <div><InviteEmployee/><nav aria-label="Employee sections" className="flex flex-wrap gap-2">
       {sections.map(section => <Button key={section.label} asChild className="rounded-full"
         variant={tab === section.tab ? "default" : "outline"}>
         <Link to="/admin/employees" search={{ q, tab: section.tab }}
           aria-current={tab === section.tab ? "page" : undefined}>{section.label}</Link>
       </Button>)}
-    </nav>
+    </nav></div>
   );
   if (tab === "notifications" || tab === "absences") {
     return <div className="space-y-5">

@@ -34,10 +34,12 @@ function AuthPage() {
     const res =
       mode === "signin"
         ? await supabase.auth.signInWithPassword({ email, password })
-        : await supabase.auth.signUp({ email, password, options: { emailRedirectTo: window.location.origin } });
+        : await supabase.auth.signUp({ email, password, options: { emailRedirectTo: window.location.href } });
     setBusy(false);
     if (res.error) { toast.error(res.error.message); return; }
     if (!res.data.session) { toast.success("Check your email to confirm your account."); return; }
+    const token=new URLSearchParams(location.search).get('invite');
+    if(token){const result=await supabase.rpc('accept_staff_invite' as never,{invite_token:token} as never);if(result.error){toast.error(result.error.message);return;}}
     window.location.replace(await roleDestination());
   }
 
