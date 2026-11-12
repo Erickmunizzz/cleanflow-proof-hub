@@ -7403,7 +7403,8 @@ function xo() {
           className: "flex-1 overflow-y-auto bg-[#F8FAFC] relative",
           children: !e ? f(panels.Login, {
             live
-          }) : p(Pu, {
+          }) : p(panels.ErrorBoundary, {
+            key: o + (u || ""),
             children: [o === "today" && !u && p("div", {
               className: "p-4 pb-24",
               children: [p("div", {
@@ -7925,5 +7926,5 @@ function xo() {
   });
 }
 Gc.createRoot(document.getElementById("root")).render(f(Xc.default.StrictMode, {
-  children: f(xo, {})
+  children: f(panels.ErrorBoundary, {children: f(xo, {})})
 }));

@@ -6,7 +6,30 @@ export async function roleDestination(){
  const access=data as unknown as {role:string;active:boolean}|null;
  if(failure)throw failure;
  if(!access)return '/planos';
+ if(access.role!=='owner'&&access.role!=='cleaner')return '/auth';
  const owner=access.role==='owner';
- return access.active?(owner?'/admin':'/funcionario'):(owner?'/planos':'/suspended');
+ return access.active?(owner?'/admin':'/cleaner'):(owner?'/planos':'/suspended');
 }
-export function RoleGate({role,children}:{role:'owner'|'cleaner';children:React.ReactNode}){const [allowed,S]=useState(false);useEffect(()=>{let active=true;const check=async()=>{const d=await roleDestination();if(!active)return;if(d===(role==='owner'?'/admin':'/funcionario'))S(true);else{S(false);location.replace(d)}};void check().catch(()=>S(false));const timer=setInterval(()=>void check().catch(()=>S(false)),15000);const {data}=supabase.auth.onAuthStateChange(()=>setTimeout(()=>void check(),0));return()=>{active=false;clearInterval(timer);data.subscription.unsubscribe()}},[role]);return allowed?<>{children}</>:<p role="status" className="p-6">Checking workspace access…</p>}
+export function RoleGate({role,children}:{role:'owner'|'cleaner';children:React.ReactNode}){
+ const [state,setState]=useState<'loading'|'allowed'|'error'>('loading');
+ const [retry,setRetry]=useState(0);
+ useEffect(()=>{
+  let active=true, running=false;
+  const check=async()=>{
+   if(!active||running)return;
+   running=true;
+   try{const destination=await roleDestination();if(!active)return;
+    if(destination===(role==='owner'?'/admin':'/cleaner'))setState('allowed');
+    else {setState('loading');location.replace(destination)}
+   }catch{if(active)setState('error')}finally{running=false}
+  };
+  void check();
+  const timer=setInterval(()=>void check(),15000);
+  let authTimer:ReturnType<typeof setTimeout>|undefined;
+  const {data}=supabase.auth.onAuthStateChange(()=>{clearTimeout(authTimer);authTimer=setTimeout(()=>void check(),0)});
+  return()=>{active=false;clearInterval(timer);clearTimeout(authTimer);data.subscription.unsubscribe()};
+ },[role,retry]);
+ if(state==='allowed')return <>{children}</>;
+ if(state==='error')return <div role="alert" className="p-6">Unable to verify workspace access. <button onClick={()=>{setState('loading');setRetry(value=>value+1)}}>Try again</button></div>;
+ return <p role="status" className="p-6">Checking workspace access…</p>;
+}

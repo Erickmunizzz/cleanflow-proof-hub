@@ -1,2 +1,3 @@
-import {createFileRoute,redirect} from '@tanstack/react-router';
-export const Route=createFileRoute('/cleaner')({beforeLoad:()=>{throw redirect({to:'/funcionario'})}});
+import {createFileRoute} from '@tanstack/react-router';
+import {EmployeeWorkspace} from '@/funcionario/Workspace';
+export const Route=createFileRoute('/cleaner')({component:EmployeeWorkspace});
