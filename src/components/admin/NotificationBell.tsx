@@ -51,7 +51,7 @@ function Inbox({ userId }: { userId: string }) {
     if (!companyId) return;
     const refresh = () => { void client.invalidateQueries({ queryKey: ["notifications", userId, companyId] }); };
     const channel = supabase.channel(`notifications-${userId}-${companyId}`)
-      .on("postgres_changes", { event: "INSERT", schema: "public", table: "notifications", filter: `user_id=eq.${userId}` }, payload => { refresh(); if (String(payload.new.title).startsWith("Employee alert:")) toast.warning(String(payload.new.title), { description: String(payload.new.message) }); })
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "notifications", filter: `user_id=eq.${userId}` }, payload => { refresh(); if (String(payload.new['title']).startsWith("Employee alert:")) toast.warning(String(payload.new['title']), { description: String(payload.new['message']) }); })
       .on("postgres_changes", { event: "UPDATE", schema: "public", table: "notifications", filter: `user_id=eq.${userId}` }, refresh)
       .subscribe(status => { if (status === "SUBSCRIBED") refresh(); });
     return () => { void supabase.removeChannel(channel); };

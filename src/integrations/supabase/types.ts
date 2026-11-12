@@ -70,6 +70,8 @@ export type Database = {
       }
       clients: {
         Row: {
+          site_latitude: number | null
+          site_longitude: number | null
           address: string | null
           city: string | null
           company_id: string | null
@@ -84,6 +86,8 @@ export type Database = {
           phone: string | null
         }
         Insert: {
+          site_latitude?: number | null
+          site_longitude?: number | null
           address?: string | null
           city?: string | null
           company_id?: string | null
@@ -98,6 +102,8 @@ export type Database = {
           phone?: string | null
         }
         Update: {
+          site_latitude?: number | null
+          site_longitude?: number | null
           address?: string | null
           city?: string | null
           company_id?: string | null
@@ -681,6 +687,8 @@ export type Database = {
       }
       jobs: {
         Row: {
+          site_latitude: number | null
+          site_longitude: number | null
           check_in_at: string | null
           check_in_latitude: number | null
           check_in_longitude: number | null
@@ -702,6 +710,8 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          site_latitude?: number | null
+          site_longitude?: number | null
           check_in_at?: string | null
           check_in_latitude?: number | null
           check_in_longitude?: number | null
@@ -723,6 +733,8 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          site_latitude?: number | null
+          site_longitude?: number | null
           check_in_at?: string | null
           check_in_latitude?: number | null
           check_in_longitude?: number | null

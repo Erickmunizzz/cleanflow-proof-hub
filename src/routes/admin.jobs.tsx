@@ -205,7 +205,7 @@ function JobsBoard() {
 function AddJobDialog({ open, onOpenChange, companyId }: { open: boolean; onOpenChange: (v: boolean) => void; companyId: string }) {
   const subscription = useSubscription();
   const qc = useQueryClient();
-  const [form, setForm] = useState({ title: "", client_id: "", staff_id: "", scheduled_date: "", notes: "" });
+  const [form, setForm] = useState({ title: "", client_id: "", staff_id: "", scheduled_date: "", notes: "", site_latitude: "", site_longitude: "" });
 
   const people = useQuery({
     queryKey: ["job-pickers", companyId],
@@ -221,6 +221,7 @@ function AddJobDialog({ open, onOpenChange, companyId }: { open: boolean; onOpen
 
   const create = useMutation({
     mutationFn: async () => {
+      if (Boolean(form.site_latitude) !== Boolean(form.site_longitude)) throw new Error("Enter both site coordinates.");
       const scheduled = new Date(form.scheduled_date);
       if (!Number.isFinite(scheduled.getTime())) throw new Error("Enter a valid scheduled date.");
       const month = new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/London", year: "numeric", month: "2-digit", day: "2-digit" }).format(scheduled);
@@ -231,6 +232,7 @@ function AddJobDialog({ open, onOpenChange, companyId }: { open: boolean; onOpen
         client_id: form.client_id || null,
         staff_id: form.staff_id || null,
         scheduled_date: scheduled.toISOString(),
+        ...{site_latitude: form.site_latitude ? Number(form.site_latitude) : null, site_longitude: form.site_longitude ? Number(form.site_longitude) : null},
         notes: form.notes || null,
         checklist: DEFAULT_CHECKLIST,
       });
@@ -241,7 +243,7 @@ function AddJobDialog({ open, onOpenChange, companyId }: { open: boolean; onOpen
       qc.invalidateQueries({ queryKey: ["jobs"] });
       qc.invalidateQueries({ queryKey: ["admin-records"] });
       qc.invalidateQueries({ queryKey: ["owner-overview"] });
-      setForm({ title: "", client_id: "", staff_id: "", scheduled_date: "", notes: "" });
+      setForm({ title: "", client_id: "", staff_id: "", scheduled_date: "", notes: "", site_latitude: "", site_longitude: "" });
       onOpenChange(false);
     },
     onError: (e: Error) => toast.error(e.message),
@@ -269,6 +271,11 @@ function AddJobDialog({ open, onOpenChange, companyId }: { open: boolean; onOpen
             <span className="mb-1 flex items-center gap-1"><Clock3 className="h-3.5 w-3.5" /> Scheduled date</span>
             <input className={input} type="datetime-local" required value={form.scheduled_date} onChange={(e) => setForm({ ...form, scheduled_date: e.target.value })} />
           </label>
+          <fieldset className="space-y-2"><legend className="text-xs">Service location coordinates (200 m GPS check-in)</legend>
+            <input aria-label="Site latitude" placeholder="Latitude" className={input} type="number" step="any" min="-90" max="90" value={form.site_latitude} onChange={e=>setForm({...form,site_latitude:e.target.value})}/>
+            <input aria-label="Site longitude" placeholder="Longitude" className={input} type="number" step="any" min="-180" max="180" value={form.site_longitude} onChange={e=>setForm({...form,site_longitude:e.target.value})}/>
+            <p className="text-xs text-muted-foreground">If omitted, customer coordinates are used. Without coordinates, check-in requires a registered site NFC/QR tag.</p>
+          </fieldset>
           <textarea className={cn(input, "h-20 py-2")} placeholder="Notes (optional)" value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} />
           <Button disabled={create.isPending || !people.isSuccess} className="h-10 w-full rounded-xl bg-primary text-[13.5px] font-semibold text-primary-foreground hover:bg-primary/90 disabled:opacity-60">
             {create.isPending ? "Saving…" : "Add job"}
