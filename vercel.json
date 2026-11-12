@@ -1,0 +1,8 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "crons": [
+    {"path":"/api/cron/reminders?slot=summer","schedule":"0 6 * * *"},
+    {"path":"/api/cron/reminders?slot=winter","schedule":"0 7 * * *"}
+  ],
+  "functions":{"api/cron/reminders.js":{"maxDuration":30}}
+}

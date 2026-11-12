@@ -1,12 +1,13 @@
-# CleanMa Cleaner deployment
+# CleanMa Cleaner operations
 
-Use a separate Vercel project connected to this repository, root directory `.`.
-Framework preset: Other (standalone React HTML bundled with esbuild).
-Build command: `npm run build:cleaner`. Output: `cleaner/netlify`.
-The Owner app is TanStack Start/React on Vite; do not replace its SSR configuration with a static Vite preset.
+Project: `cleanma-cleaner`, GitHub `Erickmunizzz/cleanflow-proof-hub`, production branch main. Secondary branches/PRs use Vercel Preview deployments. Root `.`, build `npm run build:cleaner`, output `cleaner/netlify`, Node 24. Owner app remains TanStack Start/React on Vite.
 
-Set `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` (publishable key only) in Preview and Production. The build accepts these values and defaults to the existing shared project for local builds. Never inject service-role credentials into the frontend.
+`VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` are configured in Preview and Production. Server-only `CRON_SECRET` is configured in this project; never add it to VITE-prefixed variables. No service-role key is needed: the dedicated RPC checks a SHA256 digest stored in a private RLS-protected table, then emits notifications for active cleaners' assigned jobs only. No customer/employee records are returned by the scheduler.
 
-Deployment pending: Vercel team access returned 403 on 11 November 2026. Environment variables in Vercel have not been verified or configured yet.
+Daily reminders use two daily UTC calls (06:00 and 07:00). The database only runs at hour 7 in Europe/London, covering GMT/BST. Hobby timing may be anywhere within the scheduled hour. Duplicate invocations use the notification unique key. Scheduled jobs only; notifications appear under Cleaner Profile and follow recipient/company RLS and Realtime. These are in-app reminders, not email, SMS or device push. Preview never dispatches reminders. Only this cleaner project has the scheduler credential; other projects sharing the repository must not configure CRON_SECRET or will also schedule this routine.
 
-Security verification: company branding updates applied. The pg_net REVOKE migration did not change effective privileges because the managed objects/grants belong to supabase_admin; administrative remediation is still required. Leaked-password protection remains pending: the connected Supabase tools do not expose Auth configuration updates and no Management API credential is available.
+Analytics and Speed Insights scripts are prepared in the generated Cleaner HTML; analytics normalizes the tracked URL to `/` to avoid query/path identifiers. Dashboard enablement is NOT confirmed: the dashboard browser requires login and the connected tools do not expose enablement. Metrics are not guaranteed until that step is completed. Review usage costs before enabling paid options.
+
+The explicitly requested Friend Tester account was created directly in hosted Auth with confirmed email and linked profile/staff; no credentials are committed. Login and cleaner_workspace were verified. No fake jobs were created.
+
+Previous security limitations remain: managed pg_net grants require supabase_admin; leaked-password protection needs authenticated access to Auth settings. Neither is changed by this deployment.
