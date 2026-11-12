@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as AuthRouteImport } from './routes/auth'
+import { Route as CleanerRouteImport } from './routes/cleaner'
 import { Route as ClientPortalRouteImport } from './routes/client-portal'
 import { Route as AdminIndexRouteImport } from './routes/admin.index'
 import { Route as AdminSectionRouteImport } from './routes/admin.$section'
@@ -35,6 +36,11 @@ const AdminRoute = AdminRouteImport.update({
 const AuthRoute = AuthRouteImport.update({
   id: '/auth',
   path: '/auth',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CleanerRoute = CleanerRouteImport.update({
+  id: '/cleaner',
+  path: '/cleaner',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ClientPortalRoute = ClientPortalRouteImport.update({
@@ -87,6 +93,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/admin': typeof AdminRouteWithChildren
   '/auth': typeof AuthRoute
+  '/cleaner': typeof CleanerRoute
   '/client-portal': typeof ClientPortalRoute
   '/admin/$section': typeof AdminSectionRoute
   '/admin/customers': typeof AdminCustomersRoute
@@ -100,6 +107,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/cleaner': typeof CleanerRoute
   '/client-portal': typeof ClientPortalRoute
   '/admin/$section': typeof AdminSectionRoute
   '/admin/customers': typeof AdminCustomersRoute
@@ -115,6 +123,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/admin': typeof AdminRouteWithChildren
   '/auth': typeof AuthRoute
+  '/cleaner': typeof CleanerRoute
   '/client-portal': typeof ClientPortalRoute
   '/admin/$section': typeof AdminSectionRoute
   '/admin/customers': typeof AdminCustomersRoute
@@ -131,6 +140,7 @@ export interface FileRouteTypes {
     | '/'
     | '/admin'
     | '/auth'
+    | '/cleaner'
     | '/client-portal'
     | '/admin/$section'
     | '/admin/customers'
@@ -144,6 +154,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/auth'
+    | '/cleaner'
     | '/client-portal'
     | '/admin/$section'
     | '/admin/customers'
@@ -158,6 +169,7 @@ export interface FileRouteTypes {
     | '/'
     | '/admin'
     | '/auth'
+    | '/cleaner'
     | '/client-portal'
     | '/admin/$section'
     | '/admin/customers'
@@ -173,6 +185,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AdminRoute: typeof AdminRouteWithChildren
   AuthRoute: typeof AuthRoute
+  CleanerRoute: typeof CleanerRoute
   ClientPortalRoute: typeof ClientPortalRoute
   PaymentsDemoLinkIdRoute: typeof PaymentsDemoLinkIdRoute
 }
@@ -198,6 +211,13 @@ declare module '@tanstack/react-router' {
       path: '/auth'
       fullPath: '/auth'
       preLoaderRoute: typeof AuthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/cleaner': {
+      id: '/cleaner'
+      path: '/cleaner'
+      fullPath: '/cleaner'
+      preLoaderRoute: typeof CleanerRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/client-portal': {
@@ -292,6 +312,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AdminRoute: AdminRouteWithChildren,
   AuthRoute: AuthRoute,
+  CleanerRoute: CleanerRoute,
   ClientPortalRoute: ClientPortalRoute,
   PaymentsDemoLinkIdRoute: PaymentsDemoLinkIdRoute,
 }

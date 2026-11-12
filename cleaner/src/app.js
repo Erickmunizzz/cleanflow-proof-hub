@@ -7393,7 +7393,7 @@ function xo() {
               className: "font-extrabold tracking-tight text-[15px]",
               children: "CleanMa"
             })]
-          }), f("a", {
+          }), e && f(panels.Notifications, {live}), f("a", {
             href: "mailto:support@cleanflow.uk",
             "aria-label": "Help & Support",
             className: "w-7 h-7 grid place-items-center rounded-full bg-white border border-slate-200",
@@ -7760,7 +7760,7 @@ function xo() {
                         children: "Time worked"
                       }), f("span", {
                         className: "font-bold",
-                        children: "2h 05m"
+                        children: O.check_in_at && O.check_out_at ? ((new Date(O.check_out_at)-new Date(O.check_in_at))/3600000).toFixed(1)+"h" : "—"
                       })]
                     }), p("div", {
                       className: "flex justify-between",
@@ -7769,7 +7769,7 @@ function xo() {
                         children: "Checklist"
                       }), f("span", {
                         className: "font-bold",
-                        children: "4/4 completed"
+                        children: Jn(O) + "/" + jn(O) + " completed"
                       })]
                     }), p("div", {
                       className: "flex justify-between",
@@ -7821,12 +7821,12 @@ function xo() {
             id: "today",
             label: "Today",
             icon: Br,
-            count: 4
+            count: Vt.length || null
           }, {
             id: "chat",
             label: "Chat",
             icon: Zr,
-            count: 1
+            count: live.messages.filter(m=>m.recipient_id===live.workspace?.profile.id && !m.read_at).length || null
           }, {
             id: "earnings",
             label: "Hours",

@@ -1,3 +1,4 @@
+import {RoleGate} from "@/lib/role-access";
 import { SubscriptionProvider } from "@/components/admin/SubscriptionProvider";
 import { useState } from "react";
 import { createFileRoute, Outlet } from "@tanstack/react-router";
@@ -11,7 +12,7 @@ export const Route = createFileRoute("/admin")({
 function AdminLayout() {
   const [menuOpen, setMenuOpen] = useState(false);
   return (
-    <div className="flex min-h-screen overflow-x-clip bg-background text-foreground">
+    <RoleGate role="owner"><div className="flex min-h-screen overflow-x-clip bg-background text-foreground">
       <AdminSidebar open={menuOpen} onNavigate={() => setMenuOpen(false)} />
       {menuOpen && (
         <button
@@ -26,6 +27,6 @@ function AdminLayout() {
           <SubscriptionProvider><Outlet /></SubscriptionProvider>
         </main>
       </div>
-    </div>
+    </div></RoleGate>
   );
 }

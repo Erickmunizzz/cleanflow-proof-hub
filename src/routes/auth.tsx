@@ -1,3 +1,4 @@
+import {roleDestination} from "@/lib/role-access";
 import { AuthLegalFooter } from "@/components/legal/LegalDocuments";
 import { useState } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
@@ -37,7 +38,7 @@ function AuthPage() {
     setBusy(false);
     if (res.error) { toast.error(res.error.message); return; }
     if (!res.data.session) { toast.success("Check your email to confirm your account."); return; }
-    navigate({ to: "/admin/$section", params: { section: "jobs" }, replace: true });
+    window.location.replace(await roleDestination());
   }
 
   return (
