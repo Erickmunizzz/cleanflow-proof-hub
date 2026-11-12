@@ -7255,7 +7255,7 @@ function xo() {
       let J = Jr.find(Ye => Ye.id === L);
       return m + (J?.pay || 0);
     }, 0),
-    Vt = Jr.filter(j => dayKey(j.scheduled_date) === live.today),
+    Vt = Jr.filter(j => dayKey(j.scheduled_date) === live.today).map((j,index,rows) => ({...j,status:j.status === "UPCOMING" && index === rows.findIndex(x=>x.status === "UPCOMING") ? "NEXT" : j.status})),
     Mv = Vt.find(m => m.status === "NEXT" || m.status === "IN_PROGRESS") || Vt[0];
   return null, p("div", {
     className: "min-h-screen bg-[#EEF2FF] text-slate-900 antialiased selection:bg-blue-600 selection:text-white overflow-x-clip",
@@ -7389,58 +7389,16 @@ function xo() {
           className: "h-[56px] shrink-0 flex items-center justify-between px-4 pt-2 bg-white border-b border-slate-100 sticky top-0 z-20",
           children: [p("div", {
             className: "flex items-center gap-2",
-            children: [f("img", {src:brandLogo,alt:"CleanMa logo",className:"w-8 h-8 rounded-xl object-contain"}), f("span", {
+            children: [f("img", {src:brandLogo,alt:"CleanMa logo",style:{width:48,height:28,objectFit:"contain",flexShrink:0}}), f("span", {
               className: "font-extrabold tracking-tight text-[15px]",
               children: "CleanMa"
-            }), p("span", {
-              className: "hidden sm:inline-flex ml-1 px-2 py-0.5 rounded-full bg-emerald-50 border border-emerald-200 text-[10px] font-bold text-emerald-700 items-center gap-1",
-              children: [f("span", {
-                className: "w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"
-              }), " " + live.sync]
             })]
-          }), p("div", {
-            className: "flex items-center gap-1.5",
-            children: [p("div", {
-              className: "flex items-center gap-1 px-2 h-7 rounded-full bg-slate-50 border border-slate-200 text-[11px] font-medium",
-              children: [f(Gr, {
-                className: "w-3.5 h-3.5 text-emerald-600"
-              }), " GPS"]
-            }), f("div", {
-              className: "w-7 h-7 grid place-items-center rounded-full bg-slate-50 border border-slate-200",
-              children: f(Rt, {
-                className: "w-3.5 h-3.5 text-slate-700"
-              })
-            }), p("div", {
-              className: "relative",
-              children: [p("button", {
-                onClick: () => na(!ea),
-                className: "h-7 px-2.5 rounded-full bg-white border border-slate-200 text-[11px] font-bold flex items-center gap-1 hover:bg-slate-50",
-                children: [f(Mt, {
-                  className: "w-3 h-3"
-                }), " ", Nu]
-              }), ea && f("div", {
-                className: "absolute right-0 mt-2 w-[170px] bg-white rounded-2xl shadow-xl border border-slate-200 p-2 z-50",
-                children: Yc.slice(0, 6).map(m => p("button", {
-                  onClick: () => {
-                    bo(m.code), na(!1), Be(`Language: ${m.label}`);
-                  },
-                  className: `w-full text-left px-3 py-2 rounded-xl text-[12px] flex justify-between ${Nu === m.code ? "bg-slate-900 text-white" : "hover:bg-slate-50"}`,
-                  children: [f("span", {
-                    children: m.label
-                  }), f("span", {
-                    className: "text-[10px] opacity-60",
-                    children: m.code
-                  })]
-                }, m.code))
-              })]
-            }), f("a", {
-              href: "mailto:support@cleanmaapp.com",
-              className: "w-7 h-7 grid place-items-center rounded-full bg-white border border-slate-200 hover:bg-slate-50",
-              children: f(rn, {
-                className: "w-4 h-4 text-slate-600"
-              })
+          }), f("a", {
+            href: "mailto:support@cleanflow.uk",
+            "aria-label": "Help & Support",
+            className: "w-7 h-7 grid place-items-center rounded-full bg-white border border-slate-200",
+            children: f(rn, {className: "w-4 h-4 text-slate-600"})
             })]
-          })]
         }), f("div", {
           className: "flex-1 overflow-y-auto bg-[#F8FAFC] relative",
           children: !e ? f(panels.Login, {
@@ -7453,7 +7411,7 @@ function xo() {
                 children: [p("div", {
                   children: [f("h2", {
                     className: "text-[22px] font-extrabold tracking-tight leading-tight",
-                    children: "Hello, " + live.name
+                    children: live.greeting + ", " + live.name.split(" ")[0]
                   }), p("div", {
                     className: "mt-1 flex items-center gap-2 text-[13px] text-slate-600",
                     children: [f(Lr, {
@@ -7473,7 +7431,7 @@ function xo() {
                     children: "Today"
                   }), p("div", {
                     className: "mt-1 text-[20px] font-extrabold",
-                    children: Vt.filter(m => g.has(m.id)).reduce((a, b) => a + parseFloat(b.duration), 0).toFixed(1) + "h"
+                    children: live.hoursToday + "h"
                   }), f("div", {
                     className: "text-[11px] text-emerald-600 font-medium",
                     children: [g.size, " visits"]
@@ -7488,7 +7446,7 @@ function xo() {
                     children: live.hoursWeek + "h"
                   }), f("div", {
                     className: "text-[11px] text-slate-500",
-                    children: live.jobs.filter(j => j.check_out_at).length + " completed visits"
+                    children: live.visitsWeek + " visits"
                   })]
                 }), p("div", {
                   className: "bg-white rounded-2xl border border-slate-200 p-3",
@@ -7534,7 +7492,7 @@ function xo() {
                         className: "text-right",
                         children: [p("div", {
                           className: "text-[18px] font-extrabold leading-none",
-                          children: ["£", m.pay]
+                          children: m.pay == null ? "—" : ["£", m.pay]
                         }), f("div", {
                           className: "mt-1 text-[11px] font-medium text-slate-500",
                           children: m.duration
@@ -7560,7 +7518,7 @@ function xo() {
                         }), " ", m.distance.split("•")[0]]
                       })]
                     }), L && f("div", {
-                      className: "mt-3 h-1.5 w-full bg-slate-100 rounded-full overflow-hidden",
+                      className: "hidden",
                       children: f("div", {
                         className: "h-full w-[68%] bg-[#2563EB] rounded-full animate-pulse"
                       })
