@@ -7919,33 +7919,6 @@ function xo() {
       })]
     }), f("style", {
       children: "@keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }"
-    }), f("div", {
-      className: "hidden lg:block fixed bottom-0 inset-x-0 z-10 pointer-events-none",
-      children: f("div", {
-        className: "mx-auto max-w-[1200px] p-4",
-        children: p("div", {
-          className: "pointer-events-auto bg-white/90 backdrop-blur-xl border border-slate-200 rounded-[16px] px-4 py-3 flex items-center gap-4 shadow-lg",
-          children: [f("div", {
-            className: "w-8 h-8 rounded-xl bg-slate-900 text-white grid place-items-center shrink-0",
-            children: f(xn, {
-              className: "w-4 h-4"
-            })
-          }), p("div", {
-            className: "text-[12px] leading-snug",
-            children: [f("span", {
-              className: "font-bold",
-              children: "How both apps work side-by-side:"
-            }), " ", f("span", {
-              className: "text-slate-600",
-              children: "Admin dashboard assigns & tracks (left) \u2194 Cleaner app checks in with GPS + photos (center) \u2194 Real-time sync via Supabase Realtime + Storage for photos. Attendance and messages are saved online."
-            })]
-          }), f("a", {
-            href: "mailto:support@cleanmaapp.com",
-            className: "ml-auto shrink-0 h-8 px-3 rounded-full bg-slate-900 text-white text-[11px] font-bold grid place-items-center",
-            children: "support@cleanmaapp.com"
-          })]
-        })
-      })
     }), e && f(panels.Banner, {
       live
     })]
