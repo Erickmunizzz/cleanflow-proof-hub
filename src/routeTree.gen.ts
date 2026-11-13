@@ -22,8 +22,10 @@ import { Route as AdminSectionRouteImport } from './routes/admin.$section'
 import { Route as AdminCustomersRouteImport } from './routes/admin.customers'
 import { Route as AdminEmployeesRouteImport } from './routes/admin.employees'
 import { Route as AdminJobsRouteImport } from './routes/admin.jobs'
+import { Route as AdminLoginRouteImport } from './routes/admin.login'
 import { Route as AdminSettingsRouteImport } from './routes/admin.settings'
 import { Route as AdminStorageRouteImport } from './routes/admin.storage'
+import { Route as CleanerLoginRouteImport } from './routes/cleaner.login'
 import { Route as PaymentsDemoLinkIdRouteImport } from './routes/payments.demo.$linkId'
 
 const IndexRoute = IndexRouteImport.update({
@@ -91,6 +93,11 @@ const AdminJobsRoute = AdminJobsRouteImport.update({
   path: '/jobs',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminLoginRoute = AdminLoginRouteImport.update({
+  id: '/login',
+  path: '/login',
+  getParentRoute: () => AdminRoute,
+} as any)
 const AdminSettingsRoute = AdminSettingsRouteImport.update({
   id: '/settings',
   path: '/settings',
@@ -100,6 +107,11 @@ const AdminStorageRoute = AdminStorageRouteImport.update({
   id: '/storage',
   path: '/storage',
   getParentRoute: () => AdminRoute,
+} as any)
+const CleanerLoginRoute = CleanerLoginRouteImport.update({
+  id: '/login',
+  path: '/login',
+  getParentRoute: () => CleanerRoute,
 } as any)
 const PaymentsDemoLinkIdRoute = PaymentsDemoLinkIdRouteImport.update({
   id: '/payments/demo/$linkId',
@@ -111,7 +123,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/admin': typeof AdminRouteWithChildren
   '/auth': typeof AuthRoute
-  '/cleaner': typeof CleanerRoute
+  '/cleaner': typeof CleanerRouteWithChildren
   '/client-portal': typeof ClientPortalRoute
   '/funcionario': typeof FuncionarioRoute
   '/planos': typeof PlanosRoute
@@ -120,15 +132,17 @@ export interface FileRoutesByFullPath {
   '/admin/customers': typeof AdminCustomersRoute
   '/admin/employees': typeof AdminEmployeesRoute
   '/admin/jobs': typeof AdminJobsRoute
+  '/admin/login': typeof AdminLoginRoute
   '/admin/settings': typeof AdminSettingsRoute
   '/admin/storage': typeof AdminStorageRoute
+  '/cleaner/login': typeof CleanerLoginRoute
   '/admin/': typeof AdminIndexRoute
   '/payments/demo/$linkId': typeof PaymentsDemoLinkIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
-  '/cleaner': typeof CleanerRoute
+  '/cleaner': typeof CleanerRouteWithChildren
   '/client-portal': typeof ClientPortalRoute
   '/funcionario': typeof FuncionarioRoute
   '/planos': typeof PlanosRoute
@@ -137,8 +151,10 @@ export interface FileRoutesByTo {
   '/admin/customers': typeof AdminCustomersRoute
   '/admin/employees': typeof AdminEmployeesRoute
   '/admin/jobs': typeof AdminJobsRoute
+  '/admin/login': typeof AdminLoginRoute
   '/admin/settings': typeof AdminSettingsRoute
   '/admin/storage': typeof AdminStorageRoute
+  '/cleaner/login': typeof CleanerLoginRoute
   '/admin': typeof AdminIndexRoute
   '/payments/demo/$linkId': typeof PaymentsDemoLinkIdRoute
 }
@@ -147,7 +163,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/admin': typeof AdminRouteWithChildren
   '/auth': typeof AuthRoute
-  '/cleaner': typeof CleanerRoute
+  '/cleaner': typeof CleanerRouteWithChildren
   '/client-portal': typeof ClientPortalRoute
   '/funcionario': typeof FuncionarioRoute
   '/planos': typeof PlanosRoute
@@ -156,8 +172,10 @@ export interface FileRoutesById {
   '/admin/customers': typeof AdminCustomersRoute
   '/admin/employees': typeof AdminEmployeesRoute
   '/admin/jobs': typeof AdminJobsRoute
+  '/admin/login': typeof AdminLoginRoute
   '/admin/settings': typeof AdminSettingsRoute
   '/admin/storage': typeof AdminStorageRoute
+  '/cleaner/login': typeof CleanerLoginRoute
   '/admin/': typeof AdminIndexRoute
   '/payments/demo/$linkId': typeof PaymentsDemoLinkIdRoute
 }
@@ -176,8 +194,10 @@ export interface FileRouteTypes {
     | '/admin/customers'
     | '/admin/employees'
     | '/admin/jobs'
+    | '/admin/login'
     | '/admin/settings'
     | '/admin/storage'
+    | '/cleaner/login'
     | '/admin/'
     | '/payments/demo/$linkId'
   fileRoutesByTo: FileRoutesByTo
@@ -193,8 +213,10 @@ export interface FileRouteTypes {
     | '/admin/customers'
     | '/admin/employees'
     | '/admin/jobs'
+    | '/admin/login'
     | '/admin/settings'
     | '/admin/storage'
+    | '/cleaner/login'
     | '/admin'
     | '/payments/demo/$linkId'
   id:
@@ -211,8 +233,10 @@ export interface FileRouteTypes {
     | '/admin/customers'
     | '/admin/employees'
     | '/admin/jobs'
+    | '/admin/login'
     | '/admin/settings'
     | '/admin/storage'
+    | '/cleaner/login'
     | '/admin/'
     | '/payments/demo/$linkId'
   fileRoutesById: FileRoutesById
@@ -221,7 +245,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AdminRoute: typeof AdminRouteWithChildren
   AuthRoute: typeof AuthRoute
-  CleanerRoute: typeof CleanerRoute
+  CleanerRoute: typeof CleanerRouteWithChildren
   ClientPortalRoute: typeof ClientPortalRoute
   FuncionarioRoute: typeof FuncionarioRoute
   PlanosRoute: typeof PlanosRoute
@@ -322,6 +346,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminJobsRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/login': {
+      id: '/admin/login'
+      path: '/login'
+      fullPath: '/admin/login'
+      preLoaderRoute: typeof AdminLoginRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/admin/settings': {
       id: '/admin/settings'
       path: '/settings'
@@ -335,6 +366,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/admin/storage'
       preLoaderRoute: typeof AdminStorageRouteImport
       parentRoute: typeof AdminRoute
+    }
+    '/cleaner/login': {
+      id: '/cleaner/login'
+      path: '/login'
+      fullPath: '/cleaner/login'
+      preLoaderRoute: typeof CleanerLoginRouteImport
+      parentRoute: typeof CleanerRoute
     }
     '/payments/demo/$linkId': {
       id: '/payments/demo/$linkId'
@@ -351,6 +389,7 @@ interface AdminRouteChildren {
   AdminCustomersRoute: typeof AdminCustomersRoute
   AdminEmployeesRoute: typeof AdminEmployeesRoute
   AdminJobsRoute: typeof AdminJobsRoute
+  AdminLoginRoute: typeof AdminLoginRoute
   AdminSettingsRoute: typeof AdminSettingsRoute
   AdminStorageRoute: typeof AdminStorageRoute
   AdminIndexRoute: typeof AdminIndexRoute
@@ -361,6 +400,7 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminCustomersRoute: AdminCustomersRoute,
   AdminEmployeesRoute: AdminEmployeesRoute,
   AdminJobsRoute: AdminJobsRoute,
+  AdminLoginRoute: AdminLoginRoute,
   AdminSettingsRoute: AdminSettingsRoute,
   AdminStorageRoute: AdminStorageRoute,
   AdminIndexRoute: AdminIndexRoute,
@@ -368,11 +408,22 @@ const AdminRouteChildren: AdminRouteChildren = {
 
 const AdminRouteWithChildren = AdminRoute._addFileChildren(AdminRouteChildren)
 
+interface CleanerRouteChildren {
+  CleanerLoginRoute: typeof CleanerLoginRoute
+}
+
+const CleanerRouteChildren: CleanerRouteChildren = {
+  CleanerLoginRoute: CleanerLoginRoute,
+}
+
+const CleanerRouteWithChildren =
+  CleanerRoute._addFileChildren(CleanerRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AdminRoute: AdminRouteWithChildren,
   AuthRoute: AuthRoute,
-  CleanerRoute: CleanerRoute,
+  CleanerRoute: CleanerRouteWithChildren,
   ClientPortalRoute: ClientPortalRoute,
   FuncionarioRoute: FuncionarioRoute,
   PlanosRoute: PlanosRoute,

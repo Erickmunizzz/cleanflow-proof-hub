@@ -1,29 +1,32 @@
-import {roleDestination} from '@/lib/role-access';
+import {roleDestination} from '@/lib/role-destination';
 import {AuthLegalFooter} from '@/components/legal/LegalDocuments';
 import {useState} from 'react';
 import {toast} from 'sonner';
 import {supabase} from '@/integrations/supabase/client';
 const input = "h-10 w-full rounded-xl border border-border bg-card px-3 text-[13.5px] outline-none focus:border-primary";
 
-export function AuthPage() {
+export function AuthPage({role='owner'}:{role?:'owner'|'cleaner'}) {
   const [mode, setMode] = useState<"signin" | "signup">("signin");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [error,setError]=useState('');
   const [busy, setBusy] = useState(false);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     setBusy(true);
-    const res =
-      mode === "signin"
-        ? await supabase.auth.signInWithPassword({ email, password })
-        : await supabase.auth.signUp({ email, password, options: { emailRedirectTo: window.location.href } });
-    setBusy(false);
-    if (res.error) { toast.error(res.error.message); return; }
-    if (!res.data.session) { toast.success("Check your email to confirm your account."); return; }
+    setError('');
+    try{
+    const res = mode==='signin'?await supabase.auth.signInWithPassword({email,password}):await supabase.auth.signUp({email,password,options:{emailRedirectTo:window.location.href}});
+    if(res.error)throw res.error;
+    if(!res.data.session){toast.success('Check your email to confirm your account.');return;}
     const token=new URLSearchParams(location.search).get('invite');
-    if(token){const result=await supabase.rpc('accept_staff_invite' as never,{invite_token:token} as never);if(result.error){toast.error(result.error.message);return;}}
-    window.location.replace(await roleDestination());
+    if(token){const result=await supabase.rpc('accept_staff_invite' as never,{invite_token:token} as never);if(result.error)throw result.error;}
+    const destination=await roleDestination();
+    if(destination==='/auth')throw Error('Your account does not have an active workspace profile.');
+    if((role==='owner'&&['/cleaner','/suspended'].includes(destination))||(role==='cleaner'&&['/admin','/planos'].includes(destination))){await supabase.auth.signOut();throw Error('This account belongs to the other workspace. Please use the correct sign-in page.');}
+    window.location.replace(destination);
+    }catch(e){setError(e instanceof Error?e.message:(e as {message?:string}).message||'Unable to sign in. Please try again.');}finally{setBusy(false)}
   }
 
   return (
@@ -31,16 +34,17 @@ export function AuthPage() {
       <form onSubmit={submit} className="w-full max-w-sm space-y-4 rounded-2xl border border-border bg-card p-6 shadow-[var(--shadow-card)]">
         <div className="flex items-center gap-3">
           <img src="/cleanma-logo.png" alt="CleanMa logo" className="h-8 w-12 shrink-0 rounded object-contain" />
-          <div className="text-[17px] font-bold tracking-tight">{mode === "signin" ? "Sign in" : "Create account"}</div>
+          <div className="text-[17px] font-bold tracking-tight">{mode === "signin" ? (role==='owner'?"Owner sign in":"Cleaner sign in") : "Create account"}</div>
         </div>
+        {error&&<p role="alert" className="text-sm text-destructive">{error}</p>}
         <input className={input} type="email" required placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} />
         <input className={input} type="password" required minLength={6} placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)} />
         <button disabled={busy} className="h-10 w-full rounded-xl bg-primary text-[13.5px] font-semibold text-primary-foreground hover:bg-primary/90 disabled:opacity-60">
           {busy ? "Please wait…" : mode === "signin" ? "Sign in" : "Create account"}
         </button>
-        <button type="button" onClick={() => setMode(mode === "signin" ? "signup" : "signin")} className="w-full text-[12.5px] text-muted-foreground hover:text-foreground">
+        {(role==='owner'||(typeof window!=='undefined'&&new URLSearchParams(window.location.search).has('invite')))&&<button type="button" onClick={() => setMode(mode === "signin" ? "signup" : "signin")} className="w-full text-[12.5px] text-muted-foreground hover:text-foreground">
           {mode === "signin" ? "No account yet? Create one" : "Already have an account? Sign in"}
-        </button>
+        </button>}
         <AuthLegalFooter />
       </form>
     </div>
