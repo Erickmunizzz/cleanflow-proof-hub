@@ -3,7 +3,7 @@ import { SettingsPage } from "@/components/admin/SettingsPage";
 
 export const Route = createFileRoute("/admin/settings")({
   head: () => ({ meta: [
-    { title: "System Settings — CleanMa" },
+    { title: "CleanMa" },
     { name: "description", content: "Company details, system preferences and policy settings for your CleanMa workspace." },
     { property: "og:title", content: "System Settings — CleanMa" },
     { property: "og:description", content: "Company details, system preferences and policy settings for your CleanMa workspace." },

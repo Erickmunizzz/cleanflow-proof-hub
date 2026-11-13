@@ -7,7 +7,7 @@ export const Route = createFileRoute("/admin/storage")({
     tab: inventoryTabs.find(tab => tab === search["tab"]),
   }),
   head: () => ({ meta: [
-    { title: "Materials & Replenishment — CleanMa" },
+    { title: "CleanMa" },
     { name: "description", content: "Materials & Replenishment records in your CleanMa workspace." },
     { property: "og:title", content: "Materials & Replenishment — CleanMa" },
     { property: "og:description", content: "Materials & Replenishment records in your CleanMa workspace." },

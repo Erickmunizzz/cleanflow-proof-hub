@@ -20,7 +20,7 @@ export const Route = createFileRoute("/admin/jobs")({
   validateSearch: (search: Record<string, unknown>): { status?: "cancelled" | undefined; job?: string | undefined } => ({ status: search["status"] === "cancelled" ? "cancelled" : undefined, job: typeof search["job"] === "string" ? search["job"] : undefined }),
   head: () => ({
     meta: [
-      { title: "Jobs — CleanMa" },
+      { title: "CleanMa" },
       { name: "description", content: "Live job schedule with check-in, check-out and checklists." },
       { property: "og:title", content: "Jobs — CleanMa" },
       { property: "og:description", content: "Live job schedule with check-in, check-out and checklists." },

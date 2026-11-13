@@ -4,7 +4,7 @@ import { CreditCard } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/payments/demo/$linkId")({
-  head: () => ({ meta: [{ title: "Demo payment · CleanMa" }, { name: "robots", content: "noindex,nofollow" }, { name: "referrer", content: "no-referrer" }] }),
+  head: () => ({ meta: [{ title: "CleanMa" }, { name: "robots", content: "noindex,nofollow" }, { name: "referrer", content: "no-referrer" }] }),
   component: DemoCheckout,
 });
 

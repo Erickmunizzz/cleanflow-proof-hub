@@ -21,7 +21,7 @@ export const Route = createFileRoute("/admin/employees")({
     employee: typeof search["employee"] === "string" ? search["employee"] : undefined,
   }),
   head: () => ({ meta: [
-    { title: "Staff — CleanMa" },
+    { title: "CleanMa" },
     { name: "description", content: "Staff records in your CleanMa workspace." },
     { property: "og:title", content: "Staff — CleanMa" },
     { property: "og:description", content: "Staff records in your CleanMa workspace." },

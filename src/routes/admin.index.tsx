@@ -16,7 +16,7 @@ import { readAllRows } from "@/lib/supabase-pages";
 export const Route = createFileRoute("/admin/")({
   head: () => ({
     meta: [
-      { title: "Operations Overview — CleanMa" },
+      { title: "CleanMa" },
       { name: "description", content: "Live overview of jobs, check-ins and site operations for your cleaning team." },
       { property: "og:title", content: "Operations Overview — CleanMa" },
       { property: "og:description", content: "Live overview of jobs, check-ins and site operations for your cleaning team." },

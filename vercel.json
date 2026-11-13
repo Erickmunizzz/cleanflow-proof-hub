@@ -14,12 +14,5 @@
     "api/cron/reminders.js": {
       "maxDuration": 30
     }
-  },
-  "redirects": [
-    {
-      "source": "/favicon.ico",
-      "destination": "/cleanma-logo.png",
-      "permanent": true
-    }
-  ]
+  }
 }
