@@ -1,17 +1,3 @@
-import { createFileRoute, redirect } from "@tanstack/react-router";
-
-export const Route = createFileRoute("/")({
-  beforeLoad: () => {
-    throw redirect({ to: "/admin" });
-  },
-  head: () => ({
-    meta: [
-      { title: "CleanMa — Cleaning Operations & Proof of Service" },
-      { name: "description", content: "Operations and proof-of-service platform for UK commercial cleaning companies." },
-      { property: "og:title", content: "CleanMa — Cleaning Operations & Proof of Service" },
-      { property: "og:description", content: "Operations and proof-of-service platform for UK commercial cleaning companies." },
-      { property: "og:type", content: "website" },
-      { name: "twitter:card", content: "summary_large_image" },
-    ],
-  }),
-});
+import {createFileRoute,Link} from '@tanstack/react-router';
+export const Route=createFileRoute('/')({head:()=>({meta:[{title:'CleanMa'},{name:'description',content:'Manage your cleaning operations with CleanMa.'}]}),component:Landing});
+function Landing(){return <main className="min-h-screen bg-background text-foreground"><header className="mx-auto flex max-w-6xl items-center justify-between p-6"><a href="/" className="flex items-center gap-3 font-bold"><img src="/cleanma-logo.png" alt="CleanMa" className="h-10 w-16 object-contain"/>CleanMa</a><Link to="/admin" className="rounded-xl bg-primary px-5 py-3 text-primary-foreground">Sign in</Link></header><section className="mx-auto max-w-4xl px-6 py-24 text-center"><h1 className="text-4xl font-bold tracking-tight md:text-6xl">Your cleaning operations, connected.</h1><p className="mx-auto mt-6 max-w-2xl text-lg text-muted-foreground">Manage customers, schedule jobs and stay connected with your team. One workspace for your business and your cleaners.</p><div className="mt-10 flex flex-wrap justify-center gap-4"><Link to="/admin" className="rounded-xl bg-primary px-6 py-3 font-semibold text-primary-foreground">Open owner workspace</Link><Link to="/cleaner" className="rounded-xl border border-border px-6 py-3 font-semibold">Open cleaner workspace</Link></div></section></main>}
